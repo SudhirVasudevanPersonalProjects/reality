@@ -45,7 +45,9 @@
       "Bash(supabase start:*)",
       "Bash(supabase migration:*)",
       "Bash(rm:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(timeout 10 npm run dev:*)"
     ],
     "deny": [],
     "ask": []
