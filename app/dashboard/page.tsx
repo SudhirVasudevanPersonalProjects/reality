@@ -2,6 +2,8 @@
 
 import { useAuth } from "@/lib/auth/AuthProvider";
 
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   const { user, signOut } = useAuth();
 
