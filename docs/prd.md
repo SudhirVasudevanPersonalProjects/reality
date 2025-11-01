@@ -1,7 +1,7 @@
 # My Reality - Product Requirements Document (PRD)
 
-**Version:** v5.0 (Lean & Focused)
-**Date:** 2025-10-27
+**Version:** v5.1 (Web-First MVP)
+**Date:** 2025-10-31
 **Status:** Approved
 **Author:** PM John + User
 
@@ -11,7 +11,7 @@
 
 ### Goals
 
-1. **Instant Mind Offloading**: Record thoughts, motivations, desires, and experiences instantly from phone to offload mental energy and map the self over time, helping people understand who they are, what they want, and how to become who they were meant to be.
+1. **Instant Mind Offloading**: Record thoughts, motivations, desires, and experiences instantly to offload mental energy and map the self over time, helping people understand who they are, what they want, and how to become who they were meant to be.
 
 2. **Visual Reality Mapping**: Create a visual, intuitive mapping of personal reality using thoughts, desires, experiences, and interpretations accessible on the web - a tool to plan the future, appreciate the past, and return to the present when uncertain.
 
@@ -25,12 +25,13 @@
 
 The World Health Organization identifies meaninglessness and loneliness as epidemics of our time. People are drowning in endless digital noise with no way to capture and evolve personal meaning. "My Reality" solves this by acting as a signal filter - transforming the chaos of daily experiences into coherent, meaningful self-knowledge.
 
-For example: in the midst of a doomscrolling session, when something meaningful strikes you, you can instantly text yourself "oh shit that was meaningful" and capture that moment - including links to reels, TikToks, or any content - to revisit later. By instantly capturing thoughts, experiences, memories, and even fleeting moments of inspiration from your phone, the system creates a living map of who you are, providing clarity in moments of uncertainty and preserving meaning that would otherwise be lost to the mental fog of modern life.
+For example: in the midst of a doomscrolling session, when something meaningful strikes you, you can instantly capture "oh shit that was meaningful" along with links to reels, TikToks, or any content - to revisit later. By instantly capturing thoughts, experiences, memories, and even fleeting moments of inspiration, the system creates a living map of who you are, providing clarity in moments of uncertainty and preserving meaning that would otherwise be lost to the mental fog of modern life.
 
 ### Change Log
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2025-10-31 | v5.1 | Pivot to web-first MVP - defer SMS/Twilio to Phase 2, implement email auth + web capture interface | PM John |
 | 2025-10-27 | v5.0 | Lean PRD created - simplified focus on core capture → organize loop | PM + User |
 
 ---
@@ -39,15 +40,15 @@ For example: in the midst of a doomscrolling session, when something meaningful 
 
 ### Functional Requirements
 
-**FR1:** Users can send text messages to a phone number and the content appears on their personal web dashboard.
+**FR1:** Users can create text captures via web interface and the content appears on their personal web dashboard.
 
-**FR2:** Users can send photos via text message to a phone number and the photos appear on their personal web dashboard.
+**FR2:** Users can upload photos via web interface and the photos appear on their personal web dashboard.
 
-**FR3:** Users can send videos via text message to a phone number and the videos appear on their personal web dashboard.
+**FR3:** Users can upload videos via web interface and the videos appear on their personal web dashboard.
 
-**FR4:** System recognizes and preserves URLs (TikTok, Reels, YouTube, etc.) sent via text message.
+**FR4:** System recognizes and preserves URLs (TikTok, Reels, YouTube, etc.) pasted into the web interface.
 
-**FR5:** Users are identified and authenticated by their phone number - no traditional login required.
+**FR5:** Users are identified and authenticated by email/password - simple, secure login with Supabase Auth. *(Note: Phone number field preserved in database for Phase 2 SMS features)*
 
 **FR6:** Web dashboard displays a visual, intuitive mapping of captured content (thoughts, photos, videos, links) organized over time.
 
@@ -73,9 +74,9 @@ For example: in the midst of a doomscrolling session, when something meaningful 
 
 **NFR1:** System must be extremely lightweight and simple - optimized for easy understanding and future scaling.
 
-**NFR2:** Message-to-web latency should be under 10 seconds for instant offloading experience.
+**NFR2:** Upload-to-dashboard latency should be under 3 seconds for instant offloading experience.
 
-**NFR3:** Phone-based authentication must be secure and compliant with SMS verification best practices.
+**NFR3:** Email-based authentication must be secure and compliant with industry best practices (HTTPS, secure password hashing, JWT sessions).
 
 **NFR4:** Architecture should consider future mobile app integration, but not at the cost of current simplicity (nice-to-have).
 
@@ -91,7 +92,7 @@ A calm, spacious interface resembling the vastness of space - mostly monochromat
 
 ### Key Interaction Paradigms
 
-- **Passive Capture, Active Reflection**: Content flows in effortlessly via text; deliberate interaction happens on web for organizing, connecting, and understanding
+- **Passive Capture, Active Reflection**: Content flows in effortlessly via simple web interface; deliberate interaction happens for organizing, connecting, and understanding
 - **Conversational Navigation**: LLM chatbot as primary interface for finding, sorting, and making sense of content
 - **Visual Thinking**: Mindmap as a first-class view mode, not an afterthought
 - **Triage First**: Upon opening, user sees total capture count and most recent unsorted captures requiring attention
@@ -99,11 +100,42 @@ A calm, spacious interface resembling the vastness of space - mostly monochromat
 ### Core Screens and Views
 
 1. **Landing/Triage Screen** - Shows total capture count as prominent number, displays most recent unsorted captures
-2. **Dashboard/Timeline View** - Chronological stream of all captured content
-3. **Mindmap View** - Graph visualization of connected content with relationships
-4. **Chat Interface** - LLM conversation panel for navigating reality
-5. **Content Detail View** - Individual piece with labels, connections, and metadata
-6. **Shared Experiences View** - Collaborative spaces with friends' contributions
+2. **Add to Your Reality (Capture Interface)** - GPT-like input interface for creating new captures (text, files, URLs)
+3. **Dashboard/Timeline View** - Chronological stream of all captured content
+4. **Mindmap View** - Graph visualization of connected content with relationships
+5. **Chat Interface** - LLM conversation panel for navigating reality
+6. **Content Detail View** - Individual piece with labels, connections, and metadata
+7. **Shared Experiences View** - Collaborative spaces with friends' contributions
+
+### Capture Interface Design (Phase 1 MVP)
+
+**"Add to Your Reality" Page** - Accessed via "+" button from anywhere in the app:
+
+```
+┌─────────────────────────────────────────────┐
+│  Add to Your Reality                   [X]  │
+├─────────────────────────────────────────────┤
+│                                             │
+│  [Preview area shows captures as added]     │
+│                                             │
+├─────────────────────────────────────────────┤
+│  📎  [Type or paste your thoughts...]   ⬆️  │
+└─────────────────────────────────────────────┘
+```
+
+**Interface Behavior:**
+- **GPT-like clean input** - Familiar, minimal friction
+- **Text input**: Type or paste thoughts, URLs, or paragraphs
+- **📎 Attachment**: Click to upload files (photos, videos, documents) - supports batch upload
+- **⬆️ Submit**: Creates captures and adds to timeline
+- **No AI response** - Input goes directly to your reality, no chatbot reply
+- **Each text entry = 1 capture** - Simple, no auto-splitting
+- **Each uploaded file = 1 capture** - Batch uploads create multiple captures
+
+**Phase 2 Additions** (deferred):
+- 🎤 Voice recording (microphone capture with transcription)
+- SMS/Twilio integration (text messages create captures)
+- iCloud link parsing (automatically import from iCloud shared albums)
 
 ### Accessibility
 
@@ -148,7 +180,8 @@ reality/
 - **Frontend**: Next.js 14+ App Router (React Server Components, client components)
 - **Backend Logic**:
   - Next.js API Routes for LLM chat (`/api/chat`)
-  - Supabase Edge Functions for SMS webhooks
+  - Next.js API Routes for file uploads (`/api/captures`)
+  - *(Phase 2: Supabase Edge Functions for SMS webhooks)*
 - **Database**: Supabase PostgreSQL with Row Level Security
 - **Real-time**: Supabase Realtime subscriptions (new captures appear instantly)
 
@@ -179,18 +212,19 @@ reality/
 
 - **Runtime**: Node.js / Deno (Supabase Edge Functions)
 - **Database**: Supabase PostgreSQL
-- **Auth**: Supabase Auth (phone verification via SMS)
-- **Storage**: Supabase Storage (photos, videos)
-- **SMS**: Twilio Programmable Messaging
+- **Auth**: Supabase Auth (email/password authentication)
+- **Storage**: Supabase Storage (photos, videos, documents)
 - **LLM**: OpenAI API or Anthropic Claude API
+- **Phase 2**: Twilio Programmable Messaging (SMS capture)
 
 ---
 
 ### Database & Auth
 
 - **Database**: Supabase Postgres with Row Level Security (users only see their own data)
-- **Auth Method**: Phone number-based (SMS verification codes)
-- **Session**: JWT tokens, managed by Supabase Auth
+- **Auth Method**: Email/password authentication via Supabase Auth
+- **Session**: JWT tokens in HTTP-only cookies, managed by Supabase Auth SSR
+- **Phone Number**: Column preserved in `users` table (nullable) for Phase 2 SMS features
 
 ---
 
@@ -218,10 +252,10 @@ reality/
 
 **Cost Structure (Free Tier Focus):**
 - Vercel: Free (hobby projects)
-- Supabase: Free tier covers MVP
-- Twilio: ~$0.0075 per SMS (only cost is usage)
+- Supabase: Free tier covers MVP (500MB DB, 1GB file storage)
 - OpenAI: Pay per token (rate-limit to control costs)
-- **Target**: $0/month infrastructure, ~$10-20/month for SMS + LLM at low usage
+- **Target Phase 1**: $0/month infrastructure, ~$5-10/month for LLM at low usage
+- **Target Phase 2**: Add ~$10-20/month for Twilio SMS when implemented
 
 **Browser Support:**
 - Desktop: Chrome, Firefox, Safari, Edge (modern versions)
@@ -229,15 +263,17 @@ reality/
 - Mobile: Minimal triage view only (swipe recent captures)
 
 **Performance:**
-- SMS-to-web latency: < 10 seconds
+- Upload-to-dashboard latency: < 3 seconds
 - Page load: < 2 seconds
 - Mindmap rendering: Smooth 60fps
+- File upload: Progress indicator for large files
 
 **Security:**
-- HTTPS only
-- Row Level Security on all tables
+- HTTPS only (enforced by Vercel)
+- Row Level Security on all tables (user data isolation)
 - API keys hidden in environment variables
-- Phone number verification required
+- Email/password authentication with secure password hashing
+- JWT sessions in HTTP-only cookies (XSS protection)
 
 **Future Migration Path:**
 - If advanced AI/ML needed: Add FastAPI server alongside (hybrid)
@@ -253,11 +289,11 @@ The following epics represent the logical development sequence for My Reality. E
 
 ---
 
-### Epic 1: Foundation & Phone-Based Capture
+### Epic 1: Foundation & Web-Based Capture
 
-**Goal**: Set up Next.js app, Supabase database, phone authentication, and Twilio SMS integration. Users can text a number and content appears on web dashboard.
+**Goal**: Set up Next.js app, Supabase database, email authentication, and web capture interface. Users can log in, create text/photo/video captures via clean web UI, and view them on dashboard.
 
-**Value**: Proves the core loop works - phone → web.
+**Value**: Proves the core loop works - capture → organize → reflect.
 
 ---
 
@@ -274,6 +310,49 @@ The following epics represent the logical development sequence for My Reality. E
 **Goal**: Implement mindmap view where users can connect any two pieces of content with a reason/relationship description.
 
 **Value**: Build the "reality graph" - see how thoughts/experiences relate.
+
+**Technical Approach**:
+
+Connections enable users to link 2 or more captures together with an explanatory relationship. For example:
+- **Experience**: "Eating Domino's pizza with friend"
+- **Thought**: "Friend wasn't present mentally"
+- **Connection**: "Maybe they were worried about something"
+
+Database schema uses a many-to-many relationship pattern:
+
+```sql
+-- Stores the connection metadata and relationship description
+CREATE TABLE connections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  relationship TEXT NOT NULL,  -- User's explanation of the connection
+  metadata JSONB,              -- Optional: connection type, strength, etc.
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Junction table linking captures to connections (supports 2, 3, 4+ captures per connection)
+CREATE TABLE connection_captures (
+  connection_id UUID NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+  capture_id UUID NOT NULL REFERENCES captures(id) ON DELETE CASCADE,
+  position INTEGER,  -- Optional: ordering within the connection
+  PRIMARY KEY (connection_id, capture_id)
+);
+
+-- Indexes for performance
+CREATE INDEX idx_connections_user_id ON connections(user_id);
+CREATE INDEX idx_connection_captures_connection ON connection_captures(connection_id);
+CREATE INDEX idx_connection_captures_capture ON connection_captures(capture_id);
+```
+
+**Key Design Features**:
+- Supports connecting 2+ captures (not just pairs)
+- Bidirectional navigation (query from any capture to find its connections)
+- Each connection requires user-written relationship description
+- RLS ensures users only see their own connections
+- Metadata field for future enhancements (connection types, strength ratings)
+
+**Frontend Visualization**: React Flow for graph rendering with nodes (captures) and edges (connections with relationship labels).
 
 ---
 
@@ -314,6 +393,47 @@ The following epics represent the logical development sequence for My Reality. E
 **Goal**: Optimize loading, improve animations, refine space aesthetic, performance tuning.
 
 **Value**: Beautiful, fast experience that encourages daily use.
+
+---
+
+## Phase 2: Future Features (Deferred)
+
+The following features are intentionally deferred to Phase 2 to keep the MVP lean and focused on core web experience:
+
+### SMS/Twilio Integration
+- **Status**: Deferred (requires Twilio account approval)
+- **Description**: Text messages to dedicated phone number create captures automatically
+- **Value**: Ultra-low-friction capture from anywhere (no need to open app)
+- **Prerequisites**: Twilio account setup, webhook infrastructure, phone number provisioning
+- **Epic**: Will be added as Epic 1.5 or separate epic when ready
+
+### Phone Authentication
+- **Status**: Deferred (requires SMS provider)
+- **Description**: Login via phone number + SMS verification code (no password)
+- **Value**: Passwordless authentication, familiar UX
+- **Prerequisites**: SMS provider (Twilio or Supabase built-in SMS)
+
+### Voice Recording & Transcription
+- **Status**: Deferred to simplify MVP
+- **Description**: 🎤 Microphone button in capture interface → record voice → save as audio file or transcribe to text
+- **Technical Options**:
+  - Browser Web Audio API (free, records audio files)
+  - OpenAI Whisper API (paid, transcribes speech to text)
+- **Value**: Voice journaling, hands-free capture
+- **Epic**: Likely Epic 2 or 3 (after core capture loop validated)
+
+### iCloud Link Parsing
+- **Status**: Deferred (technically complex, no public API)
+- **Description**: Paste iCloud shared album link → automatically import all photos
+- **Challenges**: No public iCloud API, requires scraping or manual download flow
+- **Alternative**: Google Drive/Dropbox link support (they have APIs)
+- **Value**: Bulk photo imports from existing collections
+
+### Advanced Organizational Framework
+- **Status**: Phase 2 feature exploration
+- **Description**: AI-assisted categorization of captures into user-defined ontologies (e.g., experiences/thoughts/desires)
+- **Value**: Personalized organizational structures beyond generic labels
+- **Epic**: Likely tied to Epic 2 (Content Organization & Labeling)
 
 ---
 

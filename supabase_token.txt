@@ -1,0 +1,2 @@
+supabase_token
+sbp_dba5fee04bd460ec4aa452953decaa107946ba1e
