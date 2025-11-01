@@ -31,27 +31,27 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Get the current session
-  const { data: { session } } = await supabase.auth.getSession()
+  // Get the current user (secure - validates with server)
+  const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
 
   // Define route categories
-  const protectedRoutes = ['/dashboard', '/captures']
+  const protectedRoutes = ['/dashboard', '/captures', '/capture']
   const authRoutes = ['/login', '/signup']
 
   const isProtected = protectedRoutes.some((r) => pathname.startsWith(r))
   const isAuth = authRoutes.some((r) => pathname.startsWith(r))
 
   // Redirect unauthenticated users from protected routes to login
-  if (isProtected && !session) {
+  if (isProtected && !user) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
   }
 
   // Redirect authenticated users from auth pages to dashboard
-  if (isAuth && session) {
+  if (isAuth && user) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/dashboard'
     return NextResponse.redirect(redirectUrl)
