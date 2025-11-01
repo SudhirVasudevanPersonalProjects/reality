@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -10,7 +10,6 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClientComponentClient();
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -39,6 +38,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      const supabase = createClient();
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -58,8 +58,9 @@ export default function SignupPage() {
       }
 
       if (data.user) {
-        // Successful signup - redirect to dashboard
+        // Successful signup - redirect to dashboard and refresh to trigger SSR
         router.push("/dashboard");
+        router.refresh();
       }
     } catch (err) {
       setError("Unable to connect. Please try again.");

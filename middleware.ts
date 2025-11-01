@@ -1,34 +1,63 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+// middleware.ts
+// Edge middleware for route protection and session management
+// Runs on Vercel Edge Runtime for low-latency auth checks
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-  const { pathname } = req.nextUrl
+export async function middleware(request: NextRequest) {
+  // Create a response object that we can modify
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  // Create Supabase client for Edge runtime
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // Get the current session
+  const { data: { session } } = await supabase.auth.getSession()
+
+  const { pathname } = request.nextUrl
+
+  // Define route categories
   const protectedRoutes = ['/dashboard', '/captures']
   const authRoutes = ['/login', '/signup']
 
   const isProtected = protectedRoutes.some((r) => pathname.startsWith(r))
   const isAuth = authRoutes.some((r) => pathname.startsWith(r))
 
+  // Redirect unauthenticated users from protected routes to login
   if (isProtected && !session) {
-    const redirectUrl = req.nextUrl.clone()
+    const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
   }
 
+  // Redirect authenticated users from auth pages to dashboard
   if (isAuth && session) {
-    const redirectUrl = req.nextUrl.clone()
+    const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/dashboard'
     return NextResponse.redirect(redirectUrl)
   }
 
-  return res
+  return supabaseResponse
 }
 
 export const config = {

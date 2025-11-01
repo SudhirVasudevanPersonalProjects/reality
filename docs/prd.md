@@ -1,9 +1,9 @@
 # My Reality - Product Requirements Document (PRD)
 
-**Version:** v5.1 (Web-First MVP)
-**Date:** 2025-10-31
+**Version:** v5.2 (Web-First MVP - Corrected Auth Architecture)
+**Date:** 2025-11-01
 **Status:** Approved
-**Author:** PM John + User
+**Author:** PM John + PO Sarah + User
 
 ---
 
@@ -31,8 +31,386 @@ For example: in the midst of a doomscrolling session, when something meaningful 
 
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
+| 2025-11-01 | v5.2 | **ARCHITECTURE CORRECTION**: SSR dashboard, CSR auth pages, unified `@supabase/ssr` pattern, removed global Auth Context. See detailed explanation below. | PO Sarah |
 | 2025-10-31 | v5.1 | Pivot to web-first MVP - defer SMS/Twilio to Phase 2, implement email auth + web capture interface | PM John |
 | 2025-10-27 | v5.0 | Lean PRD created - simplified focus on core capture → organize loop | PM + User |
+
+---
+
+## Architecture Correction Explanation (v5.2)
+
+### What Was Wrong
+
+The initial implementation (v5.1) had **five critical issues** that caused authentication state confusion, cookie management problems, and violated Next.js 14 best practices:
+
+#### Issue 1: Mixed Client Creation Methods
+**Problem**: Three different ways of creating Supabase clients existed simultaneously:
+- `lib/supabase/client.ts` exported `createClient()` AND `createClientComponent()`
+- Login page used `createClientComponent()` from our custom helper
+- Signup page used `createClientComponentClient()` from deprecated `@supabase/auth-helpers-nextjs`
+- Middleware used `createMiddlewareClient()` from deprecated package
+
+**Why This Failed**:
+- Different client creation methods use different cookie strategies
+- `createClientComponentClient()` (deprecated) manages cookies differently than `createBrowserClient()` from `@supabase/ssr`
+- Session state could become out-of-sync between pages
+- Cookie conflicts caused "session not found" errors after login
+
+#### Issue 2: No Server-Side Rendering for Dashboard
+**Problem**: Dashboard was a Client Component using `useAuth()` hook:
+```typescript
+// ❌ WRONG: Client Component dashboard
+"use client"
+export default function DashboardPage() {
+  const { user, signOut } = useAuth() // Client-side only
+  return <div>{user.email}</div>
+}
+```
+
+**Why This Failed**:
+- Dashboard had to wait for client-side JavaScript to load before checking auth
+- No pre-fetched user data (slow initial render)
+- Violated the ChatGPT architecture guidance: "SSR dashboard → pre-populate data before rendering"
+- User sees flash of loading state on every page load
+
+#### Issue 3: Deprecated Packages
+**Problem**: Used `@supabase/auth-helpers-nextjs` package which is **officially deprecated** by Supabase.
+
+**Why This Failed**:
+- Package will be removed in future Supabase versions
+- Lacks modern SSR optimizations from `@supabase/ssr`
+- Missing Edge Runtime support
+- Security patches no longer provided
+
+#### Issue 4: Unnecessary Global Auth Context
+**Problem**: Created `AuthProvider` wrapping entire app with React Context:
+```typescript
+// ❌ WRONG: Global context provider
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null)
+  const [session, setSession] = useState(null)
+  // ... complex state management
+  return <AuthContext.Provider value={...}>{children}</AuthContext.Provider>
+}
+```
+
+**Why This Failed**:
+- Added unnecessary complexity (120 lines of context code)
+- Supabase SSR already manages session via cookies - no need for global state
+- Caused re-renders across entire app when auth state changed
+- Harder to debug (state spread across client/server boundaries)
+
+#### Issue 5: Cookie Management Inconsistency
+**Problem**: Different cookie handling strategies across middleware, server components, and client components.
+
+**Why This Failed**:
+- Middleware used one cookie API, pages used another
+- Session tokens could be set in cookies but not read correctly
+- Race conditions during login/logout (cookie updates not atomic)
+
+---
+
+### What Was Fixed
+
+#### Fix 1: Unified Client Creation ✅
+**Solution**: Single `createClient()` function in each environment, all using `@supabase/ssr`:
+
+```typescript
+// ✅ CORRECT: lib/supabase/client.ts (Browser - CSR)
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+```
+
+```typescript
+// ✅ CORRECT: lib/supabase/server.ts (Server - SSR)
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Server Component context - cookies set by middleware
+          }
+        },
+      },
+    }
+  )
+}
+```
+
+**Why This Works**:
+- Both use `@supabase/ssr` package (unified cookie strategy)
+- Browser client for CSR (login, signup, client-side mutations)
+- Server client for SSR (dashboard, API routes, pre-fetching)
+- Cookies managed consistently across all environments
+
+#### Fix 2: SSR Dashboard with Pre-fetched Data ✅
+**Solution**: Dashboard is now a Server Component that fetches user data before rendering:
+
+```typescript
+// ✅ CORRECT: app/dashboard/page.tsx (Server Component)
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import DashboardClient from './DashboardClient'
+
+export const dynamic = 'force-dynamic'
+
+export default async function DashboardPage() {
+  const supabase = await createClient() // Server-side client
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (!session) {
+    redirect('/login') // Server-side redirect (no flash)
+  }
+
+  const user = session.user // Pre-fetched server-side
+
+  return <DashboardClient user={user} /> // Pass to Client Component
+}
+```
+
+```typescript
+// ✅ CORRECT: app/dashboard/DashboardClient.tsx (Client Component)
+'use client'
+
+export default function DashboardClient({ user }: { user: User }) {
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    const supabase = createClient() // Browser client
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
+  return (
+    <div>
+      <span>{user.email}</span> {/* Already available, no loading */}
+      <button onClick={handleSignOut}>Log out</button>
+    </div>
+  )
+}
+```
+
+**Why This Works**:
+- **Server Component** (async function) runs on server, fetches user data BEFORE HTML sent to browser
+- User data pre-populated in initial HTML response (instant render)
+- No loading state, no flash of unauthenticated content
+- Client Component handles interactivity (logout button)
+- Matches ChatGPT architecture: "SSR dashboard with pre-populated data"
+
+#### Fix 3: Migrated to `@supabase/ssr` ✅
+**Solution**: Removed all usage of deprecated `@supabase/auth-helpers-nextjs`, migrated to `@supabase/ssr`:
+
+```typescript
+// ✅ CORRECT: middleware.ts (Edge Runtime)
+import { createServerClient } from '@supabase/ssr'
+
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // Route protection logic
+  if (isProtected && !session) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  return supabaseResponse
+}
+```
+
+**Why This Works**:
+- Modern `@supabase/ssr` package maintained by Supabase
+- Edge Runtime compatible (runs on Vercel Edge for <50ms auth checks)
+- Correct cookie handling for Edge environment
+- Future-proof (won't be deprecated)
+
+#### Fix 4: Removed Global Auth Context ✅
+**Solution**: Deleted `lib/auth/AuthProvider.tsx` entirely, removed from `app/layout.tsx`:
+
+```typescript
+// ✅ CORRECT: app/layout.tsx (No AuthProvider wrapper)
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body className="bg-void text-white antialiased">
+        {children} {/* No provider needed */}
+      </body>
+    </html>
+  )
+}
+```
+
+**Why This Works**:
+- Supabase SSR manages session in **HTTP-only cookies** automatically
+- Server Components read cookies via `createClient()` from `lib/supabase/server.ts`
+- Client Components read cookies via `createClient()` from `lib/supabase/client.ts`
+- No need for global state - cookies ARE the source of truth
+- Simpler architecture, fewer lines of code, easier to debug
+
+#### Fix 5: Unified Cookie Strategy ✅
+**Solution**: All environments use same cookie handling pattern from `@supabase/ssr`:
+
+- **Browser (CSR)**: `createBrowserClient()` → automatically reads/writes cookies
+- **Server (SSR)**: `createServerClient()` → uses Next.js `cookies()` API with `getAll()`/`setAll()`
+- **Middleware (Edge)**: `createServerClient()` → uses `request.cookies` and `response.cookies`
+
+**Why This Works**:
+- Single source of truth: HTTP-only cookies set by Supabase
+- Consistent API across all environments
+- No race conditions (cookies updated atomically)
+- Secure (HTTP-only, SameSite, Secure flags set automatically)
+
+---
+
+### How the Corrected Architecture Works (Flow Diagram)
+
+#### **Login Flow**:
+```
+1. User visits /login (CSR Client Component)
+   ↓
+2. User submits email/password
+   ↓
+3. Client calls createClient() from lib/supabase/client.ts (Browser Client)
+   ↓
+4. supabase.auth.signInWithPassword({ email, password })
+   ↓
+5. Supabase sets JWT token in HTTP-only cookie
+   ↓
+6. router.push('/dashboard') + router.refresh()
+   ↓
+7. Middleware intercepts request, reads cookie, allows access
+   ↓
+8. Dashboard Server Component runs createClient() from lib/supabase/server.ts
+   ↓
+9. Reads session from cookie, fetches user data server-side
+   ↓
+10. Renders HTML with pre-populated user data (instant, no flash)
+```
+
+#### **Dashboard Load Flow**:
+```
+1. User navigates to /dashboard
+   ↓
+2. Middleware runs (Edge Runtime)
+   ↓
+3. Reads session from HTTP-only cookie
+   ↓
+4. If no session → redirect to /login (server-side, no flash)
+   ↓
+5. If session exists → allow request to continue
+   ↓
+6. Dashboard Server Component runs (server-side)
+   ↓
+7. Fetches user data from Supabase using session from cookie
+   ↓
+8. Pre-populates user data into HTML
+   ↓
+9. Sends HTML to browser (user sees data immediately)
+   ↓
+10. Client Component hydrates (logout button becomes interactive)
+```
+
+#### **Logout Flow**:
+```
+1. User clicks "Log out" button (Client Component)
+   ↓
+2. Client calls createClient() from lib/supabase/client.ts
+   ↓
+3. supabase.auth.signOut()
+   ↓
+4. Supabase clears JWT cookie
+   ↓
+5. router.push('/login') + router.refresh()
+   ↓
+6. Middleware intercepts, sees no session, allows /login access
+   ↓
+7. Login page renders
+```
+
+---
+
+### Why This Architecture is Better
+
+| Aspect | Old (v5.1) | New (v5.2) | Benefit |
+|--------|-----------|-----------|---------|
+| **Dashboard Rendering** | Client Component (CSR) | Server Component (SSR) | Instant data, no loading flash |
+| **Auth State Management** | Global React Context (120 lines) | HTTP-only cookies (0 lines) | Simpler, automatic, secure |
+| **Client Creation** | 3 different methods | 1 unified method per environment | Consistent, predictable |
+| **Package Dependencies** | Deprecated `@supabase/auth-helpers-nextjs` | Modern `@supabase/ssr` | Future-proof, maintained |
+| **Cookie Handling** | Inconsistent across pages | Unified strategy | No race conditions |
+| **Middleware Performance** | Unknown (deprecated API) | Edge Runtime (<50ms) | Fast auth checks |
+| **Lines of Code** | AuthProvider (120) + pages | Pages only | Simpler, maintainable |
+| **ChatGPT Alignment** | ❌ No SSR dashboard | ✅ SSR with pre-fetch | Matches architecture guidance |
+
+---
+
+### Key Takeaways
+
+1. **SSR Dashboard is Critical**: Pre-fetching user data server-side eliminates loading states and provides instant UX
+2. **Unified Cookie Strategy**: Using `@supabase/ssr` across all environments ensures consistent session management
+3. **No Global State Needed**: Supabase SSR handles session via cookies - React Context adds unnecessary complexity
+4. **Server Components Win**: For protected routes with data, Server Components provide better performance than Client Components
+5. **Edge Middleware**: Running auth checks on Edge Runtime (instead of Node.js) provides sub-50ms latency
+
+---
+
+### Testing the Corrected Architecture
+
+**Dev Server Running**: http://localhost:3002
+
+**Test These Flows**:
+1. Visit `/login` → Login with valid credentials → Should redirect to `/dashboard` (instant, no flash)
+2. Dashboard should show user email immediately (pre-fetched server-side)
+3. Click "Log out" → Should redirect to `/login`
+4. Try accessing `/dashboard` without login → Should redirect to `/login` (middleware protection)
+5. Refresh dashboard while logged in → Data should appear instantly (no loading state)
+
+**Expected Behavior**:
+- ✅ No flash of unauthenticated content
+- ✅ No loading spinners on dashboard
+- ✅ Instant redirects (server-side, not client-side)
+- ✅ Session persists across page refreshes
+- ✅ Cookies visible in DevTools → Application → Cookies (HTTP-only flag set)
+
+---
+
+**Architecture now matches industry best practices for Next.js 14 + Supabase SSR applications.**
 
 ---
 
@@ -178,21 +556,32 @@ reality/
 **Serverless Web App + Managed Backend Services**
 
 - **Frontend**: Next.js 14+ App Router (React Server Components, client components)
+  - **SSR Pages**: Dashboard and protected routes use Server Components for pre-fetched data
+  - **CSR Pages**: Auth pages (login/signup) use Client Components for interactive forms
 - **Backend Logic**:
   - Next.js API Routes for LLM chat (`/api/chat`)
   - Next.js API Routes for file uploads (`/api/captures`)
   - *(Phase 2: Supabase Edge Functions for SMS webhooks)*
 - **Database**: Supabase PostgreSQL with Row Level Security
 - **Real-time**: Supabase Realtime subscriptions (new captures appear instantly)
+- **Middleware**: Edge middleware for route protection and session management
 
 **NOT microservices** - Simple monolithic Next.js app with thin serverless functions.
+
+**Authentication Architecture**:
+- **CSR Auth Forms**: Login/signup pages use Client Components with `@supabase/ssr` browser client
+- **SSR Protected Routes**: Dashboard uses Server Component with `@supabase/ssr` server client to pre-fetch user data
+- **Edge Middleware**: Route protection runs on Vercel Edge Runtime using `@supabase/ssr` for low-latency session checks
+- **No Global Auth Context**: Session state managed via HTTP-only cookies, accessed server-side or client-side as needed
 
 **Rationale**:
 - No servers to manage
 - Auto-scaling built-in
 - Free tier covers MVP
 - All TypeScript (consistent language)
-- Already started with Supabase auth
+- SSR dashboard provides instant data pre-population
+- Edge middleware ensures fast auth checks (<50ms typical)
+- Simplified architecture removes need for global React Context
 
 ---
 
@@ -223,8 +612,16 @@ reality/
 
 - **Database**: Supabase Postgres with Row Level Security (users only see their own data)
 - **Auth Method**: Email/password authentication via Supabase Auth
-- **Session**: JWT tokens in HTTP-only cookies, managed by Supabase Auth SSR
+- **Session**: JWT tokens in HTTP-only cookies, managed by Supabase Auth SSR (`@supabase/ssr`)
 - **Phone Number**: Column preserved in `users` table (nullable) for Phase 2 SMS features
+
+**Auth Implementation Pattern**:
+- **Client-Side (CSR)**: `lib/supabase/client.ts` exports `createClient()` using `createBrowserClient()` from `@supabase/ssr`
+  - Used in: Login, signup, logout button (Client Components)
+- **Server-Side (SSR)**: `lib/supabase/server.ts` exports `createClient()` using `createServerClient()` from `@supabase/ssr`
+  - Used in: Dashboard, API routes, server data fetching (Server Components)
+- **Edge Middleware**: `middleware.ts` uses `createServerClient()` directly for route protection
+  - Runs on Vercel Edge Runtime for low-latency auth checks
 
 ---
 

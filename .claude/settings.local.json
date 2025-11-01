@@ -64,7 +64,8 @@
       "Bash(ls:*)",
       "Bash(timeout 30 bash:*)",
       "WebFetch(domain:reality-3f1o9eusu-sudhirvasudevanpersonalprojects-projects.vercel.app)",
-      "Bash(supabase link:*)"
+      "Bash(supabase link:*)",
+      "Bash(timeout 30 pnpm dev:*)"
     ],
     "deny": [],
     "ask": []

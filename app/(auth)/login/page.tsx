@@ -1,65 +1,63 @@
 'use client'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useState, FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const supabase = createClientComponentClient();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
+    e.preventDefault()
+    setError(null)
 
-    // Client-side validation
+    // Client-side validation first
     if (!validateEmail(email)) {
-      setError("Please enter a valid email address");
-      return;
+      setError("Please enter a valid email address")
+      return
     }
 
     if (password.length < 6) {
-      setError("Password should be at least 6 characters");
-      return;
+      setError("Password should be at least 6 characters")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
+      const supabase = createClient()
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
-      });
+      })
 
       if (signInError) {
         // Handle specific Supabase errors
         if (signInError.message.includes("Invalid login credentials")) {
-          setError("Invalid email or password");
+          setError("Invalid email or password")
         } else {
-          setError("Unable to connect. Please try again.");
+          setError("Unable to connect. Please try again.")
         }
-        setLoading(false);
-        return;
+        setLoading(false)
+        return
       }
 
       if (data.user) {
-        // Successful login - redirect to dashboard
-        router.push("/dashboard");
+        // Successful login - redirect and refresh to trigger SSR
+        router.push("/dashboard")
+        router.refresh()
       }
     } catch (err) {
-      setError("Unable to connect. Please try again.");
-      setLoading(false);
+      setError("Unable to connect. Please try again.")
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white">

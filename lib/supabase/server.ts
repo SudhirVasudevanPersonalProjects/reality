@@ -1,3 +1,7 @@
+// lib/supabase/server.ts
+// Server client for Server Components (SSR) and API routes
+// Use this in dashboard page, API routes, and server-side data fetching
+
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { Database } from "./database.types";
