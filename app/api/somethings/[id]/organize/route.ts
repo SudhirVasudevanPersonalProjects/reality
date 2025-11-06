@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { organizeRequestSchema } from '@/lib/schemas/organization'
 import { OrganizeResponse } from '@/lib/types/organization'
@@ -117,6 +118,11 @@ export async function PATCH(
         // The something was already organized successfully
       }
     }
+
+    // Revalidate dashboard and chamber to show updated unorganized count
+    revalidatePath('/dashboard');
+    revalidatePath('/chamber');
+    revalidatePath('/my_reality');
 
     const response: OrganizeResponse = {
       success: true,

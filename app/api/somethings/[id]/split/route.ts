@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { splitRequestSchema } from '@/lib/schemas/split'
 import { SplitResponse } from '@/lib/types/split'
@@ -87,6 +88,10 @@ export async function POST(
       // Don't fail the request if delete fails - splits were created successfully
       // Parent will remain in Chamber, user can manually delete or re-split
     }
+
+    // Revalidate chamber and dashboard to reflect new splits
+    revalidatePath('/chamber');
+    revalidatePath('/dashboard');
 
     const response: SplitResponse = {
       success: true,

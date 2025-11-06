@@ -3,6 +3,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 // Response type for capture creation
 interface CaptureResponse {
@@ -214,6 +215,10 @@ export async function POST(request: NextRequest) {
 
     // Return success if at least one capture was created
     if (createdCaptures.length > 0) {
+      // Revalidate dashboard and chamber to show updated unorganized count
+      revalidatePath('/dashboard');
+      revalidatePath('/chamber');
+
       return NextResponse.json({
         success: true,
         captures: createdCaptures,
