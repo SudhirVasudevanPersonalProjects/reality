@@ -65,7 +65,20 @@
       "Bash(timeout 30 bash:*)",
       "WebFetch(domain:reality-3f1o9eusu-sudhirvasudevanpersonalprojects-projects.vercel.app)",
       "Bash(supabase link:*)",
-      "Bash(timeout 30 pnpm dev:*)"
+      "Bash(timeout 30 pnpm dev:*)",
+      "Bash(powershell.exe -Command \"Start-Process ''C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe''\")",
+      "Bash(npx supabase:*)",
+      "Bash(lib/supabase/database.types.ts)",
+      "Bash(dir:*)",
+      "Bash(pnpm run lint)",
+      "Bash(timeout 10 bash:*)",
+      "Bash(pnpm run types:*)",
+      "Bash(supabase gen types:*)",
+      "Bash(timeout 5 bash:*)",
+      "Bash(npx tsc:*)",
+      "SlashCommand(/BMad:agents:sm)",
+      "Bash(mv:*)",
+      "Bash(timeout 60 bash:*)"
     ],
     "deny": [],
     "ask": []

@@ -20,7 +20,7 @@ activation-instructions:
   - STEP 1: Read THIS ENTIRE FILE - it contains your complete persona definition
   - STEP 2: Adopt the persona defined in the 'agent' and 'persona' sections below
   - STEP 3: Load and read `.bmad-core/core-config.yaml` (project configuration) before any greeting
-  - STEP 4: MANDATORY - Read ALL files listed in core-config.yaml devLoadAlwaysFiles array BEFORE greeting the user. These are your explicit development standards. Do NOT skip this step. Do NOT greet until all devLoadAlwaysFiles are loaded.
+  - STEP 4: Read ALL files listed in core-config.yaml devLoadAlwaysFiles - these are your explicit development standards for this project
   - STEP 5: Greet user with your name/role and immediately run `*help` to display available commands
   - STEP 6: HALT and await user instructions (unless activation included specific commands to execute)
   - DO NOT: Load any other agent files during activation
