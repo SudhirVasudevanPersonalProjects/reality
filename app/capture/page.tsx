@@ -112,8 +112,11 @@ export default function CapturePage() {
         fileInputRef.current.value = ''
       }
 
-      // Force full page reload to dashboard to see fresh unorganized count
-      window.location.href = '/dashboard'
+      // Show success message and stay on page for more captures
+      setShowSuccess(true)
+
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => setShowSuccess(false), 3000)
     } catch (err) {
       console.error('Error creating capture:', err)
       setError(err instanceof Error ? err.message : 'Failed to create capture')
@@ -183,12 +186,12 @@ export default function CapturePage() {
                       <img
                         src={selectedFile.preview}
                         alt={`Preview ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg border border-gray-700"
+                        className="w-full h-auto max-h-64 object-contain rounded-lg border border-gray-700"
                       />
                     ) : (
                       <video
                         src={selectedFile.preview}
-                        className="w-full h-32 object-cover rounded-lg border border-gray-700"
+                        className="w-full h-auto max-h-64 object-contain rounded-lg border border-gray-700"
                       />
                     )}
                     <button
