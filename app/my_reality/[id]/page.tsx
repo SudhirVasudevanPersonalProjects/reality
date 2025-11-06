@@ -157,14 +157,14 @@ export default async function SomethingDetailPage({
               <img
                 src={something.media_url}
                 alt="Experience media"
-                className="rounded-lg max-w-full h-auto"
+                className="rounded-lg w-full h-auto max-h-[80vh] object-contain"
               />
             )}
             {something.content_type === 'video' && (
               <video
                 src={something.media_url}
                 controls
-                className="rounded-lg max-w-full h-auto"
+                className="rounded-lg w-full h-auto max-h-[80vh] object-contain"
               />
             )}
             {something.content_type === 'link' && (
