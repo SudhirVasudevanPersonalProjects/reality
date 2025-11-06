@@ -70,7 +70,7 @@ describe("DashboardClient", () => {
   });
 
   it("shows empty state when no captures", () => {
-    render(<DashboardClient user={mockUser as any} captures={[]} />);
+    render(<DashboardClient user={mockUser as any} captures={[]} unorganizedCount={0} />);
 
     expect(screen.getByText(/No captures yet/i)).toBeInTheDocument();
     expect(screen.getByText(/Start capturing your reality/i)).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe("DashboardClient", () => {
       },
     ];
 
-    render(<DashboardClient user={mockUser as any} captures={mockCaptures as any} />);
+    render(<DashboardClient user={mockUser as any} captures={mockCaptures as any} unorganizedCount={0} />);
 
     expect(screen.getByText("My first capture")).toBeInTheDocument();
   });

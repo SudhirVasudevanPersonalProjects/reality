@@ -53,18 +53,18 @@ export async function POST(request: NextRequest) {
 
     const createdCaptures: CaptureResponse[] = [];
     const failedFiles: string[] = [];
+    const trimmedText = textContent?.trim() || null;
 
-    // Handle text content capture
-    if (textContent && textContent.trim().length > 0) {
-      const trimmedText = textContent.trim();
-
+    // If text but NO files, create text-only capture
+    if (trimmedText && trimmedText.length > 0 && files.length === 0) {
       // Save the text capture
       const { data: textCapture, error: textError } = await supabase
-        .from("captures")
+        .from("somethings")
         .insert({
           user_id: user.id,
           content_type: "text",
           text_content: trimmedText,
+          captured_at: new Date().toISOString(),
         })
         .select("id, content_type, created_at")
         .single();
@@ -93,12 +93,13 @@ export async function POST(request: NextRequest) {
       if (urls && urls.length > 0) {
         // Create separate URL captures (hidden from main dashboard)
         for (const url of urls) {
-          const { data: urlCapture } = await supabase
-            .from("captures")
+          await supabase
+            .from("somethings")
             .insert({
               user_id: user.id,
               content_type: "url",
               text_content: url,
+              captured_at: new Date().toISOString(),
             })
             .select("id, content_type, created_at")
             .single();
@@ -176,13 +177,15 @@ export async function POST(request: NextRequest) {
         // Determine content type based on MIME type
         const contentType = file.type.startsWith("image/") ? "photo" : "video";
 
-        // Create capture record
+        // Create capture record (include text if provided with files)
         const { data: fileCapture, error: captureError } = await supabase
-          .from("captures")
+          .from("somethings")
           .insert({
             user_id: user.id,
             content_type: contentType,
             media_url: publicUrl,
+            text_content: trimmedText && trimmedText.length > 0 ? trimmedText : null,
+            captured_at: new Date().toISOString(),
           })
           .select("id, content_type, created_at")
           .single();

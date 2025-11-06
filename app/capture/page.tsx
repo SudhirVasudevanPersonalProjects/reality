@@ -104,9 +104,6 @@ export default function CapturePage() {
         setWarning(`Some files could not be uploaded: ${data.failedFiles.join(', ')}`)
       }
 
-      // Show success message
-      setShowSuccess(true)
-
       // Clear form
       setTextContent('')
       selectedFiles.forEach((f) => URL.revokeObjectURL(f.preview))
@@ -115,11 +112,8 @@ export default function CapturePage() {
         fileInputRef.current.value = ''
       }
 
-      // Redirect to dashboard after a brief delay
-      setTimeout(() => {
-        router.push('/dashboard')
-        router.refresh()
-      }, 1500)
+      // Force full page reload to dashboard to see fresh unorganized count
+      window.location.href = '/dashboard'
     } catch (err) {
       console.error('Error creating capture:', err)
       setError(err instanceof Error ? err.message : 'Failed to create capture')
@@ -134,11 +128,12 @@ export default function CapturePage() {
       <nav className="border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/dashboard" className="text-xl font-bold hover:text-gray-300 transition">
+            <Link href="/dashboard" prefetch={false} className="text-xl font-bold hover:text-gray-300 transition">
               Reality
             </Link>
             <Link
               href="/dashboard"
+              prefetch={false}
               className="px-4 py-2 text-sm border border-gray-700 rounded-md hover:bg-gray-900 transition"
             >
               Back to Dashboard
@@ -154,7 +149,7 @@ export default function CapturePage() {
         {/* Success Message */}
         {showSuccess && (
           <div className="mb-6 p-4 bg-green-900/30 border border-green-700 rounded-lg text-green-300 text-center">
-            ✓ Capture created successfully! Redirecting to dashboard...
+            ✓ Captured! Add more or navigate away.
           </div>
         )}
 
@@ -253,18 +248,24 @@ export default function CapturePage() {
                 </span>
               </div>
 
-              {/* Submit Button */}
+              {/* Submit Button - Responsive text */}
               <button
                 type="submit"
                 disabled={isSubmitting || (!textContent.trim() && selectedFiles.length === 0)}
-                className="p-2 bg-white text-black rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center"
-                title="Submit capture"
-                aria-label={isSubmitting ? 'Submitting capture...' : 'Submit capture'}
+                className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2 font-semibold"
+                title="Add to Your Reality"
+                aria-label={isSubmitting ? 'Submitting capture...' : 'Add to Your Reality'}
               >
                 {isSubmitting ? (
-                  <span className="text-xl" aria-hidden="true">⏳</span>
+                  <>
+                    <span className="text-xl" aria-hidden="true">⏳</span>
+                    <span className="hidden md:inline">Submitting...</span>
+                  </>
                 ) : (
-                  <span className="text-xl" aria-hidden="true">⬆️</span>
+                  <>
+                    <span className="text-xl" aria-hidden="true">+</span>
+                    <span className="hidden md:inline">Add to Your Reality</span>
+                  </>
                 )}
               </button>
             </div>

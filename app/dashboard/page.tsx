@@ -5,7 +5,7 @@ import { Database } from '@/lib/supabase/database.types'
 
 export const dynamic = 'force-dynamic'
 
-type Capture = Database['public']['Tables']['captures']['Row']
+type Capture = Database['public']['Tables']['somethings']['Row']
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -15,17 +15,29 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  // Fetch user's captures ordered by created_at DESC
-  // Filter out 'url' type captures (those are for background storage/querying only)
+  // Fetch user's ORGANIZED somethings (realm IS NOT NULL) ordered by captured_at DESC
+  // Filter out 'url' type somethings (those are for background storage/querying only)
   const { data: captures, error } = await supabase
-    .from('captures')
+    .from('somethings')
     .select('*')
     .eq('user_id', user.id)
     .neq('content_type', 'url')
-    .order('created_at', { ascending: false })
+    .not('realm', 'is', null)  // Only organized somethings
+    .order('captured_at', { ascending: false })
+
+  // Get count of unorganized somethings (realm IS NULL)
+  const { count: unorganizedCount, error: countError } = await supabase
+    .from('somethings')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .is('realm', null)
 
   if (error) {
     console.error('Error fetching captures:', error)
+  }
+
+  if (countError) {
+    console.error('Error fetching unorganized count:', countError)
   }
 
   // Generate fresh signed URLs for media captures (private bucket)
@@ -58,5 +70,5 @@ export default async function DashboardPage() {
     })
   )
 
-  return <DashboardClient user={user} captures={capturesWithSignedUrls} />
+  return <DashboardClient user={user} captures={capturesWithSignedUrls} unorganizedCount={unorganizedCount || 0} />
 }

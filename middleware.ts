@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Define route categories
-  const protectedRoutes = ['/dashboard', '/captures', '/capture']
+  const protectedRoutes = ['/dashboard', '/captures', '/capture', '/chamber', '/my_reality']
   const authRoutes = ['/login', '/signup']
 
   const isProtected = protectedRoutes.some((r) => pathname.startsWith(r))

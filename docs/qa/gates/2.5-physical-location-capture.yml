@@ -1,0 +1,276 @@
+schema: 1
+story: '2.5'
+story_title: 'Physical Location Capture & Geocoding'
+gate: PASS
+status_reason: 'Excellent implementation with comprehensive coverage of all acceptance criteria, robust error handling, and exemplary test architecture. Ready for production deployment.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-11-05T00:00:00Z'
+
+top_issues: [] # No blocking issues identified
+
+waiver:
+  active: false
+
+quality_score: 95
+expires: '2025-11-19T00:00:00Z'
+
+evidence:
+  tests_reviewed: 16
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: |
+      - Coordinate validation at API level prevents injection attacks
+      - Environment variable properly prefixed with NEXT_PUBLIC_ for client usage
+      - Mapbox token is public (safe by design)
+      - Row Level Security inherited from Supabase schema
+      - No SQL injection vectors (uses Supabase ORM)
+  performance:
+    status: PASS
+    notes: |
+      - 300ms debounce prevents excessive API calls
+      - Spatial index created for Story 2.7 map queries
+      - Graceful error handling prevents UI freezes
+      - Efficient state management with minimal re-renders
+  reliability:
+    status: PASS
+    notes: |
+      - Comprehensive error handling for Mapbox API failures
+      - Manual entry fallback ensures user is never blocked
+      - Coordinate range validation prevents invalid data
+      - Option 2 approach allows submission even without coordinates
+  maintainability:
+    status: PASS
+    notes: |
+      - Clean separation of concerns (geocoding helper, component, API handler)
+      - Well-documented code with inline comments
+      - TypeScript strict mode enforced
+      - Comprehensive test coverage (16 test cases across 3 test files)
+      - Clear file structure following project conventions
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Consider adding geocoding result caching in localStorage for frequently searched locations'
+      refs: ['lib/mapbox/geocoding.ts']
+      priority: 'P2'
+    - action: 'Add telemetry to track geocoding success rate and Mapbox API performance'
+      refs: ['lib/mapbox/geocoding.ts']
+      priority: 'P2'
+    - action: 'Consider adding elevation capture using Mapbox Terrain API (Epic 4)'
+      refs: ['docs/epic-2-brainstorming.md']
+      priority: 'P3'
+
+test_coverage_summary:
+  unit_tests:
+    - file: 'tests/mapbox/geocoding.test.ts'
+      test_count: 4
+      status: PASS
+      coverage_areas:
+        - 'Geocoding API integration'
+        - 'Error handling'
+        - 'Result limit enforcement'
+        - 'Coordinate formatting'
+    - file: 'tests/components/location-input-autocomplete.test.tsx'
+      test_count: 6
+      status: PASS
+      coverage_areas:
+        - 'Autocomplete rendering'
+        - 'Selection callback'
+        - 'Keyboard navigation'
+        - 'Loading states'
+        - 'Error states'
+        - 'Accessibility attributes'
+    - file: 'tests/chamber/organize-with-coordinates.test.ts'
+      test_count: 6
+      status: PASS
+      coverage_areas:
+        - 'Coordinate acceptance and storage'
+        - 'Latitude validation'
+        - 'Longitude validation'
+        - 'Manual entry fallback'
+        - 'Formatted address storage'
+        - 'Mind realm independence'
+
+acceptance_criteria_traceability:
+  AC1_mapbox_autocomplete_integration:
+    status: VERIFIED
+    test_refs:
+      - 'tests/mapbox/geocoding.test.ts: geocoding client initialization'
+      - 'tests/components/location-input-autocomplete.test.tsx: autocomplete rendering'
+    manual_test_refs:
+      - 'TC-01: Mapbox Autocomplete Integration'
+  AC2_search_functionality:
+    status: VERIFIED
+    test_refs:
+      - 'tests/mapbox/geocoding.test.ts: 5-result limit enforcement'
+      - 'tests/components/location-input-autocomplete.test.tsx: debounced search'
+    manual_test_refs:
+      - 'TC-01: Mapbox Autocomplete Integration'
+      - 'TC-17: Debounce Functionality'
+  AC3_suggestion_display:
+    status: VERIFIED
+    test_refs:
+      - 'tests/components/location-input-autocomplete.test.tsx: suggestion rendering'
+    manual_test_refs:
+      - 'TC-01: Mapbox Autocomplete Integration'
+  AC4_selection_capture:
+    status: VERIFIED
+    test_refs:
+      - 'tests/components/location-input-autocomplete.test.tsx: selection callback with coordinates'
+    manual_test_refs:
+      - 'TC-02: Location Selection & Coordinate Capture'
+  AC5_coordinate_storage:
+    status: VERIFIED
+    test_refs:
+      - 'tests/chamber/organize-with-coordinates.test.ts: coordinate acceptance and storage'
+    manual_test_refs:
+      - 'TC-03: Database Coordinate Storage'
+  AC6_coordinate_validation:
+    status: VERIFIED
+    test_refs:
+      - 'tests/chamber/organize-with-coordinates.test.ts: latitude validation'
+      - 'tests/chamber/organize-with-coordinates.test.ts: longitude validation'
+    manual_test_refs:
+      - 'TC-04: Invalid Latitude Validation'
+      - 'TC-05: Invalid Longitude Validation'
+  AC7_required_fields_physical:
+    status: VERIFIED
+    test_refs:
+      - 'lib/schemas/organization.ts: Zod schema validation'
+      - 'tests/chamber/organize-with-coordinates.test.ts: manual entry fallback (Option 2)'
+    manual_test_refs:
+      - 'TC-06: Manual Entry Fallback with Warning'
+      - 'TC-07: Mind Realm Does Not Require Coordinates'
+  AC8_manual_entry_fallback:
+    status: VERIFIED
+    test_refs:
+      - 'tests/chamber/organize-with-coordinates.test.ts: allows submission without coordinates'
+      - 'app/chamber/ChamberClient.tsx: warning message implementation'
+    manual_test_refs:
+      - 'TC-06: Manual Entry Fallback with Warning'
+  AC9_state_management:
+    status: VERIFIED
+    test_refs:
+      - 'app/chamber/ChamberClient.tsx: coordinate state variables'
+      - 'app/chamber/ChamberClient.tsx: handleRealmChange clears coordinates'
+    manual_test_refs:
+      - 'TC-18: State Management Across Realm Changes'
+  AC10_api_schema_extension:
+    status: VERIFIED
+    test_refs:
+      - 'lib/schemas/organization.ts: coordinate fields in Zod schema'
+      - 'lib/types/organization.ts: TypeScript types'
+    code_refs:
+      - 'lib/schemas/organization.ts:13-15'
+      - 'lib/types/organization.ts:11-13'
+  AC11_api_handler_update:
+    status: VERIFIED
+    test_refs:
+      - 'tests/chamber/organize-with-coordinates.test.ts: all API handler tests'
+    code_refs:
+      - 'app/api/somethings/[id]/organize/route.ts:66-91'
+  AC12_database_migration:
+    status: VERIFIED
+    code_refs:
+      - 'supabase/migrations/20251105000001_add_location_fields.sql'
+    manual_test_refs:
+      - 'TC-15: Spatial Index Verification'
+  AC13_environment_variable:
+    status: VERIFIED
+    code_refs:
+      - '.env.example:9-10'
+      - 'lib/mapbox/geocoding.ts:10'
+    manual_test_refs:
+      - 'TC-16: Environment Variable Configuration'
+  AC14_loading_state:
+    status: VERIFIED
+    test_refs:
+      - 'tests/components/location-input-autocomplete.test.tsx: loading state test'
+    code_refs:
+      - 'app/components/LocationInput.tsx:132-136'
+    manual_test_refs:
+      - 'TC-12: Loading State Indicator'
+  AC15_error_handling:
+    status: VERIFIED
+    test_refs:
+      - 'tests/mapbox/geocoding.test.ts: graceful error handling'
+      - 'tests/components/location-input-autocomplete.test.tsx: error state test'
+    code_refs:
+      - 'lib/mapbox/geocoding.ts:39-42'
+      - 'app/components/LocationInput.tsx:47-50'
+    manual_test_refs:
+      - 'TC-13: API Error Handling'
+  AC16_accessibility:
+    status: VERIFIED
+    test_refs:
+      - 'tests/components/location-input-autocomplete.test.tsx: keyboard navigation tests'
+      - 'tests/components/location-input-autocomplete.test.tsx: accessibility attributes test'
+    code_refs:
+      - 'app/components/LocationInput.tsx:71-101 (keyboard handlers)'
+      - 'app/components/LocationInput.tsx:126-130 (ARIA attributes)'
+    manual_test_refs:
+      - 'TC-08: Keyboard Navigation (Arrow Keys)'
+      - 'TC-09: Keyboard Navigation (Enter)'
+      - 'TC-10: Keyboard Navigation (Escape)'
+      - 'TC-11: Keyboard Navigation (Tab)'
+      - 'TC-14: Accessibility - Screen Reader Announcements'
+  AC17_story_2_7_readiness:
+    status: VERIFIED
+    code_refs:
+      - 'supabase/migrations/20251105000001_add_location_fields.sql:22-24 (spatial index)'
+    manual_test_refs:
+      - 'TC-19: Story 2.7 Readiness - Query for Mappable Somethings'
+
+risk_assessment:
+  risks:
+    - risk_id: 'R1'
+      description: 'Mapbox API rate limits (600 requests/minute)'
+      probability: LOW
+      impact: MEDIUM
+      risk_score: 3
+      mitigation: 'Debouncing (300ms) prevents excessive calls. Free tier allows 50k requests/month. MVP scale well within limits.'
+      status: MITIGATED
+    - risk_id: 'R2'
+      description: 'Mapbox weak for specific business searches (e.g., "Papa Johns La Jolla")'
+      probability: MEDIUM
+      impact: MEDIUM
+      risk_score: 6
+      mitigation: 'Manual entry fallback (Option 2) allows users to proceed. LLM enhancement planned for Epic 4.'
+      status: ACCEPTED
+      deferred_to: 'Epic 4'
+
+technical_debt:
+  identified: []
+  accepted:
+    - item: 'Mapbox geocoding accuracy for business names (~60%)'
+      rationale: 'Deferred to Epic 4 LLM enhancement. Manual entry fallback sufficient for MVP.'
+      tracking: 'docs/epic-2-brainstorming.md:629-641'
+
+story_dependencies:
+  upstream:
+    - story: '2.4'
+      status: COMPLETE
+      handoff_verified: true
+      notes: 'Physical/Mind organization workflow, location text input, organize API all functioning correctly'
+    - story: '2.1'
+      status: COMPLETE
+      handoff_verified: true
+      notes: 'Database schema with latitude/longitude columns exists'
+  downstream:
+    - story: '2.7'
+      status: BLOCKED
+      unblocked_by: 'Story 2.5 completion'
+      notes: 'Physical somethings now have coordinates for 3D map rendering. Query: WHERE latitude IS NOT NULL'
+
+deployment_readiness:
+  database_migration: READY
+  environment_variables: READY
+  feature_flags: NOT_APPLICABLE
+  rollback_plan: SIMPLE
+  rollback_notes: 'Database migration is additive (new columns). Rollback: set coordinates to NULL if needed. No breaking changes.'

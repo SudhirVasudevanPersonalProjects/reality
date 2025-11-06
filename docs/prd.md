@@ -473,17 +473,19 @@ A calm, spacious interface resembling the vastness of space - mostly monochromat
 - **Passive Capture, Active Reflection**: Content flows in effortlessly via simple web interface; deliberate interaction happens for organizing, connecting, and understanding
 - **Conversational Navigation**: LLM chatbot as primary interface for finding, sorting, and making sense of content
 - **Visual Thinking**: Mindmap as a first-class view mode, not an afterthought
-- **Triage First**: Upon opening, user sees total capture count and most recent unsorted captures requiring attention
+- **Chamber of Reflection First**: The Chamber is the portal between external reality and "my reality". Upon opening dashboard, user sees gemstone portal button and unorganized capture count, prompting intentional reflection before viewing organized content
 
 ### Core Screens and Views
 
-1. **Landing/Triage Screen** - Shows total capture count as prominent number, displays most recent unsorted captures
-2. **Add to Your Reality (Capture Interface)** - GPT-like input interface for creating new captures (text, files, URLs)
-3. **Dashboard/Timeline View** - Chronological stream of all captured content
-4. **Mindmap View** - Graph visualization of connected content with relationships
-5. **Chat Interface** - LLM conversation panel for navigating reality
-6. **Content Detail View** - Individual piece with labels, connections, and metadata
-7. **Shared Experiences View** - Collaborative spaces with friends' contributions
+1. **Dashboard (Landing)** - Gemstone "Enter the Chamber" button centered, unorganized capture count below, organized content timeline below that. Only shows organized somethings (realm ≠ NULL)
+2. **Chamber of Reflection** - Liminal portal space for triaging unorganized captures one-by-one via slideshow. User-controlled split decisions, realm classification, category/tag assignment, care rating. Organization happens here before content enters "my reality"
+3. **Capture Interface** - GPT-like input for creating new captures (text, files, URLs). No redirect after submit - user stays on page to add more. Responsive button text: desktop shows "Add to Your Reality", mobile shows only "+"
+4. **Timeline View** - Horizontal chronological stream of organized content with brightness based on care rating
+5. **Map View** - Spatial visualization of Reality realm items with location markers
+6. **Mindmap View** - Graph visualization of connected content with relationships
+7. **Chat Interface** - LLM conversation panel for navigating reality
+8. **Content Detail View** - Individual piece with labels, connections, and metadata
+9. **Shared Experiences View** - Collaborative spaces with friends' contributions
 
 ### Capture Interface Design (Phase 1 MVP)
 
@@ -505,15 +507,127 @@ A calm, spacious interface resembling the vastness of space - mostly monochromat
 - **GPT-like clean input** - Familiar, minimal friction
 - **Text input**: Type or paste thoughts, URLs, or paragraphs
 - **📎 Attachment**: Click to upload files (photos, videos, documents) - supports batch upload
-- **⬆️ Submit**: Creates captures and adds to timeline
+- **⬆️ Submit**: Creates captures as unorganized somethings (realm: NULL)
 - **No AI response** - Input goes directly to your reality, no chatbot reply
+- **No redirect after submit** - User stays on /capture page to add more (frictionless continuation)
 - **Each text entry = 1 capture** - Simple, no auto-splitting
 - **Each uploaded file = 1 capture** - Batch uploads create multiple captures
+- **Responsive button text**: Desktop shows "Add to Your Reality" text, mobile shows only "+" icon
 
 **Phase 2 Additions** (deferred):
 - 🎤 Voice recording (microphone capture with transcription)
 - SMS/Twilio integration (text messages create captures)
 - iCloud link parsing (automatically import from iCloud shared albums)
+
+### Chamber of Reflection Design
+
+**Concept**: The Chamber of Reflection is the **liminal space** between external reality (captures) and internal reality ("my reality" - organized, structured understanding). It is a sacred portal for transforming unorganized captures into meaningful elements of the user's reality map.
+
+**Philosophy**: Organization is not algorithmic - it is **personal, intuitive, feeling-based**. The Chamber respects that only the user knows whether a capture represents one thing or many, whether it belongs in Reality/Mind/Heart realms, and how it connects to their existing understanding. This prevents psychic entropy and preserves mental energy through intentional, bounded reflection.
+
+**Visual Aesthetic**: Game-like sacred space with **gemstone/sparkly background** on the Chamber entry button. Engraved text ("Enter the Chamber of Reflection") reinforces this is a special portal, not mundane data entry. Think: jewel-encrusted door in a fantasy game, shimmering entrance to a meditation chamber.
+
+#### Dashboard Integration
+
+```
+┌─────────────────────────────────────────────────┐
+│             My Reality Dashboard                │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│           ┌─────────────────────────┐           │
+│           │  ✨ GEMSTONE BUTTON ✨  │           │
+│           │                         │           │
+│           │  Enter the Chamber of   │           │
+│           │     Reflection          │           │
+│           │                         │           │
+│           │ (sparkly, engraved)     │           │
+│           └─────────────────────────┘           │
+│                                                 │
+│              47+ unorganized                    │
+│                                                 │
+│  ─────────────────────────────────────────────  │
+│  (Below: Organized content - Timeline/Map)      │
+└─────────────────────────────────────────────────┘
+```
+
+**Dashboard Layout**:
+1. **Top/Center**: Gemstone "Enter the Chamber of Reflection" button (prominent, centered)
+2. **Below Button**: Unorganized capture count (e.g., "47+ unorganized")
+3. **Below Counter**: Organized somethings timeline/views (realm ≠ NULL only)
+
+**Dashboard Query**: `SELECT * FROM somethings WHERE user_id = ? AND realm IS NOT NULL`
+- Dashboard shows ONLY organized content (has been processed through Chamber)
+- Unorganized captures (realm: NULL) only visible IN the Chamber
+
+#### Chamber UI (Slideshow Triage)
+
+**Route**: `/chamber`
+
+**Format**: One-by-one slideshow (FIFO - oldest unorganized captures first)
+
+**Layout**:
+```
+┌─────────────────────────────────────────────────┐
+│           Chamber of Reflection                 │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│  [Current Something]                            │
+│  Text: "Coffee with John at Philz"              │
+│  Media: [photo1.jpg] [photo2.jpg]               │
+│  Captured: Nov 1, 2025 3:45 PM                  │
+│                                                 │
+│  ───────────────────────────────────────────    │
+│                                                 │
+│  [ ] Split this into multiple somethings?       │
+│                                                 │
+│  Realm:  ○ Reality  ○ Mind  ○ Heart             │
+│  Domain: [Reality ▼]                            │
+│  Category: [places/travel ▼]                    │
+│  Care: 😞 ⚫⚫⚪⚪⚪ 😍  (1-5 slider)             │
+│  Tags: [#coffee #social] + Add                  │
+│                                                 │
+│  [Skip] [Next →] [Organize & Continue]          │
+└─────────────────────────────────────────────────┘
+```
+
+**Organization Controls** (all IN the Chamber):
+- **Split Decision**: User-controlled (checkbox + modal). Not algorithmic. Applies to multi-line text, multi-photo, mixed media
+- **Realm Classification**: Reality (physical) / Mind (mental) / Heart (emotional)
+- **Domain Assignment**: Default domains (Abode/Reality/Mind/Heart) or user-created custom domains
+- **Category**: User's custom hierarchies (flexible organizational frameworks)
+- **Care Rating**: 1-5 slider (Hate → Love, emotional response)
+- **Tags**: Cross-cutting labels (#insight, #beauty, etc.)
+- **Temporal**: When in time (captured_at, user can adjust)
+- **Spatial**: Where in space (lat/lng for Reality realm items)
+- **Relational**: How it connects (hierarchy, mindmap, dependencies)
+
+**Custom Organization Dimensions** (Future Extensibility):
+- **WHERE** (domain): User defines which domain/space this belongs to
+- **HOW** (framework): User chooses organizational structure (hierarchy, mindmap, temporal, spatial, relational)
+- **WHEN** (time): User adjusts temporal context (past/present/future)
+- **WHERE IN SPACE** (location): Physical coordinates for Reality realm
+
+The Chamber UI should eventually support user customization of organization controls (custom sliders, taggers, pickers), but MVP uses standard controls (realm picker, category dropdown, care slider, tag input).
+
+**Psychic Entropy Prevention** (Future Feature):
+- User configures max unorganized captures allowed (e.g., 50)
+- When limit reached, capture interface blocks new submissions
+- Message: "Your Chamber is full. Reflect on what you've captured before adding more."
+- Forces intentional processing, prevents cognitive overload, preserves energy
+
+#### Split Workflow (IN the Chamber)
+
+**User-Controlled Split** (NOT automatic):
+- User sees something and decides: "Is this one thing or many?"
+- Applies to: Multi-line text, multi-photo, mixed media captures
+- Split modal allows manual boundary adjustment
+- User assigns media to specific splits
+- Creates new somethings with parent_id
+
+**Split Examples**:
+- Multi-line text: "Coffee with John\nI need to travel more" → User splits into 2
+- Multi-photo: 3 photos from trip → User keeps together OR splits per photo
+- Mixed media: Text + video → User decides single something OR separate
 
 ### Accessibility
 
@@ -694,11 +808,11 @@ The following epics represent the logical development sequence for My Reality. E
 
 ---
 
-### Epic 2: Content Organization & Labeling
+### Epic 2: Chamber of Reflection & Three Realms Organization
 
-**Goal**: Users can view captured content on web, create custom labels, and organize content by labels through simple UI.
+**Goal**: Build the Chamber of Reflection portal where users triage unorganized captures one-by-one, classify them into Reality/Mind/Heart realms with user-defined hierarchies, care ratings, tags, and flexible organizational dimensions.
 
-**Value**: Transform chaotic captures into organized knowledge.
+**Value**: Transform chaotic captures into structured "my reality" through intentional reflection. Prevents psychic entropy via bounded, feeling-based organization.
 
 ---
 

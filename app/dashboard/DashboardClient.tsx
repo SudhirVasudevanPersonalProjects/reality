@@ -6,14 +6,15 @@ import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/lib/supabase/database.types'
 import Link from 'next/link'
 
-type Capture = Database['public']['Tables']['captures']['Row']
+type Capture = Database['public']['Tables']['somethings']['Row']
 
 interface DashboardClientProps {
   user: User
   captures: Capture[]
+  unorganizedCount: number
 }
 
-export default function DashboardClient({ user, captures }: DashboardClientProps) {
+export default function DashboardClient({ user, captures, unorganizedCount }: DashboardClientProps) {
   const router = useRouter()
 
   const handleSignOut = async () => {
@@ -76,6 +77,12 @@ export default function DashboardClient({ user, captures }: DashboardClientProps
             <h2 className="text-xl font-bold">Reality</h2>
             <div className="flex items-center space-x-4">
               <Link
+                href="/my_reality"
+                className="px-4 py-2 text-sm border border-gray-700 rounded-md hover:bg-gray-900 transition"
+              >
+                My Reality
+              </Link>
+              <Link
                 href="/capture"
                 className="px-4 py-2 text-sm bg-white text-black rounded-md hover:bg-gray-200 transition font-semibold"
               >
@@ -96,8 +103,40 @@ export default function DashboardClient({ user, captures }: DashboardClientProps
       <main className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold mb-8 text-center">my reality</h1>
 
-        {/* Empty State */}
-        {captures.length === 0 ? (
+        {/* Gemstone Button - Enter the Chamber */}
+        {unorganizedCount > 0 && (
+          <div className="mb-12 flex flex-col items-center justify-center w-full">
+            <Link
+              href="/chamber"
+              prefetch={false}
+              className="group relative px-12 py-6 text-white rounded-xl font-bold text-xl shadow-2xl hover:shadow-purple-900/50 transition-all duration-300 hover:scale-105 border-2 border-purple-700/50 overflow-hidden"
+              style={{
+                background: 'radial-gradient(ellipse at 50% 30%, #a78bfa 0%, #7c3aed 25%, #6d28d9 40%, #5b21b6 60%, #4c1d95 80%, #2e1065 100%)',
+                boxShadow: '0 0 40px rgba(139, 92, 246, 0.5), inset 0 -10px 30px rgba(139, 92, 246, 0.3), inset 0 10px 20px rgba(167, 139, 250, 0.2)',
+                clipPath: 'polygon(15% 0%, 85% 0%, 100% 15%, 100% 85%, 85% 100%, 15% 100%, 0% 85%, 0% 15%)',
+              }}
+            >
+              <span className="relative z-10 flex items-center justify-center">
+                <span className="font-serif tracking-wide text-center" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                  Enter the Chamber of Reflection
+                </span>
+              </span>
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            </Link>
+            <p className="mt-4 text-gray-300 text-lg font-bold">
+              {unorganizedCount}+ unorganized
+            </p>
+          </div>
+        )}
+
+        {/* Divider between Chamber section and organized content */}
+        {unorganizedCount > 0 && captures.length > 0 && (
+          <div className="mb-8 border-t border-gray-800" />
+        )}
+
+        {/* Empty State - No captures at all */}
+        {captures.length === 0 && unorganizedCount === 0 ? (
           <div className="text-center py-16">
             <div className="mb-6">
               <p className="text-xl text-gray-400 mb-2">No captures yet</p>
@@ -109,6 +148,18 @@ export default function DashboardClient({ user, captures }: DashboardClientProps
             >
               + Create Your First Capture
             </Link>
+          </div>
+        ) : captures.length === 0 && unorganizedCount > 0 ? (
+          /* No organized captures yet, but unorganized exist - prompt to organize */
+          <div className="text-center py-16">
+            <div className="mb-6">
+              <p className="text-xl text-gray-400 mb-2">No organized content yet</p>
+              <p className="text-sm text-gray-500">
+                You have {unorganizedCount} unorganized capture{unorganizedCount !== 1 ? 's' : ''}.
+                <br />
+                Enter the Chamber to organize them and see your reality take shape.
+              </p>
+            </div>
           </div>
         ) : (
           /* Captures Timeline */
