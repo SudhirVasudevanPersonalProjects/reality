@@ -171,7 +171,9 @@ export default function DashboardClient({ user, captures, unorganizedCount }: Da
               >
                 {/* Timestamp */}
                 <div className="text-xs text-gray-500 mb-3">
-                  {formatTimestamp(capture.created_at)}
+                  <span suppressHydrationWarning>
+                    {formatTimestamp(capture.created_at)}
+                  </span>
                 </div>
 
                 {/* Content based on type */}

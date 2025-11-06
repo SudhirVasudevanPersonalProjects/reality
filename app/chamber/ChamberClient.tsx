@@ -271,7 +271,9 @@ export default function ChamberClient({ something: initialSomething }: ChamberCl
 
           {/* Timestamp */}
           <div className="text-xs text-gray-500 border-t border-gray-800 pt-4">
-            Captured: {formatTimestamp(something.captured_at)}
+            <span suppressHydrationWarning>
+              Captured: {formatTimestamp(something.captured_at)}
+            </span>
           </div>
         </div>
 

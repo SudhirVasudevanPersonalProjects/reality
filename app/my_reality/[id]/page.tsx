@@ -126,7 +126,9 @@ export default async function SomethingDetailPage({
 
         {/* Timestamp */}
         <p className="text-gray-500 text-sm mb-6">
-          {formatTimestamp(something.captured_at)}
+          <span suppressHydrationWarning>
+            {formatTimestamp(something.captured_at)}
+          </span>
         </p>
 
         {/* Care rating */}
@@ -191,9 +193,9 @@ export default async function SomethingDetailPage({
         {/* Metadata */}
         <div className="mt-8 text-xs text-gray-600">
           <p>ID: {something.id}</p>
-          <p>Created: {new Date(something.created_at || '').toLocaleString()}</p>
+          <p suppressHydrationWarning>Created: {new Date(something.created_at || '').toLocaleString()}</p>
           {something.updated_at && (
-            <p>Updated: {new Date(something.updated_at).toLocaleString()}</p>
+            <p suppressHydrationWarning>Updated: {new Date(something.updated_at).toLocaleString()}</p>
           )}
         </div>
       </div>

@@ -129,7 +129,9 @@ export function ExperienceListModal({
                 >
                   {/* Timestamp */}
                   <div className="text-sm text-gray-400 mb-2">
-                    {formatTimestamp(experience.captured_at)}
+                    <span suppressHydrationWarning>
+                      {formatTimestamp(experience.captured_at)}
+                    </span>
                   </div>
 
                   {/* Preview text */}
