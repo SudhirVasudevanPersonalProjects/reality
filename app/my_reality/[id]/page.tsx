@@ -71,7 +71,7 @@ export default async function SomethingDetailPage({
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-white overflow-y-auto">
       {/* Header with back button */}
       <div className="border-b border-gray-800 bg-gray-900">
         <div className="max-w-4xl mx-auto px-6 py-4">
@@ -157,14 +157,14 @@ export default async function SomethingDetailPage({
               <img
                 src={something.media_url}
                 alt="Experience media"
-                className="rounded-lg w-full h-auto max-h-[80vh] object-contain"
+                className="rounded-lg w-full h-auto object-contain"
               />
             )}
             {something.content_type === 'video' && (
               <video
                 src={something.media_url}
                 controls
-                className="rounded-lg w-full h-auto max-h-[80vh] object-contain"
+                className="rounded-lg w-full h-auto object-contain"
               />
             )}
             {something.content_type === 'link' && (
