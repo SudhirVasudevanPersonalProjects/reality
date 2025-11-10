@@ -78,7 +78,13 @@
       "Bash(npx tsc:*)",
       "SlashCommand(/BMad:agents:sm)",
       "Bash(mv:*)",
-      "Bash(timeout 60 bash:*)"
+      "Bash(timeout 60 bash:*)",
+      "Bash(supabase db pull:*)",
+      "Bash(echo:*)",
+      "SlashCommand(/BMad:agents:qa)",
+      "Bash(\"C:\\Users\\14088\\misc.inc\\reality\\docs\\ur-reality.md\")",
+      "Bash(\"C:\\Users\\14088\\misc.inc\\reality\\docs\\prd.md\")",
+      "SlashCommand(/BMad:agents:analyst)"
     ],
     "deny": [],
     "ask": []

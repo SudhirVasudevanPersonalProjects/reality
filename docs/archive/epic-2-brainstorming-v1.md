@@ -526,6 +526,15 @@ element.style.backgroundColor = `hsl(0, 0%, ${brightness * 100}%)`;
 - Create tags on-the-fly if don't exist
 - Save to somethings with abode_type='mind'
 
+**Story 2.4 PATCH: Chamber Mind Categories & Why Field** ⭐ **NEXT - IMPLEMENT BEFORE 2.8**
+- Add Mind Category dropdown (Experience/Thought/Desire)
+- Add "Why this matters" textarea field
+- Add Desire-specific fields (intensity, status)
+- Update organize API to accept new attributes
+- Visual indicator: Somewhere vs Organized
+- **Status**: Approved - Ready for Implementation
+- **File**: `docs/stories/2.4-patch-chamber-mind-categories.md`
+
 **Story 2.7: Physical Map - 3D Buildings, Markers & Experience List**
 - **3D Bird's Eye View**: pitch=45°, bearing=-17.6°, antialias=true
 - **3D Building Layer**: fill-extrusion with real building heights (opacity 0.6)

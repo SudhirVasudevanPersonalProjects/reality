@@ -13,7 +13,15 @@ export const organizeRequestSchema = z.object({
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
   formatted_address: z.string().max(500).optional(),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  // Story 2.4 PATCH: Mind-specific attributes
+  attributes: z.object({
+    mind_category: z.enum(['experience', 'thought', 'desire']).optional(),
+    why: z.string().max(1000).optional(),
+    desire_intensity: z.number().min(0).max(1).optional(),
+    desire_status: z.enum(['nascent', 'active', 'fulfilled']).optional(),
+    sun_domain: z.string().optional()
+  }).optional()
 }).refine(
   (data) => {
     // If realm is physical, location_name is required

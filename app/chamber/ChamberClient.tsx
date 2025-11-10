@@ -34,6 +34,12 @@ export default function ChamberClient({ something: initialSomething }: ChamberCl
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [warningMessage, setWarningMessage] = useState<string | null>(null)
 
+  // Mind-specific state (Story 2.4 PATCH)
+  const [mindCategory, setMindCategory] = useState<'experience' | 'thought' | 'desire'>('thought')
+  const [why, setWhy] = useState<string>('')
+  const [desireIntensity, setDesireIntensity] = useState<number>(0.5)
+  const [desireStatus, setDesireStatus] = useState<'nascent' | 'active' | 'fulfilled'>('nascent')
+
   const formatTimestamp = (timestamp: string | null) => {
     if (!timestamp) return ''
     const date = new Date(timestamp)
@@ -79,7 +85,35 @@ export default function ChamberClient({ something: initialSomething }: ChamberCl
       setLongitude(null)
       setFormattedAddress('')
       setLocationName('')
+      // Set smart default for mind category based on content
+      setMindCategory(guessCategory(something))
+    } else {
+      // Clear mind-specific fields when switching to physical
+      setMindCategory('thought')
+      setWhy('')
+      setDesireIntensity(0.5)
+      setDesireStatus('nascent')
     }
+  }
+
+  // Smart category detection (Story 2.4 PATCH)
+  const guessCategory = (something: Something): 'experience' | 'thought' | 'desire' => {
+    const hasMedia = !!something.media_url
+    const hasLocation = !!something.latitude
+    const text = something.text_content?.toLowerCase() || ''
+
+    // Experience indicators
+    if (hasMedia && hasLocation) return 'experience'
+    if (text.match(/\b(I (saw|went|visited|met|did)|today|yesterday)\b/)) return 'experience'
+
+    // Desire indicators
+    if (text.match(/\b(I want|I wish|I hope|goal|dream|aspire)\b/)) return 'desire'
+
+    // Thought indicators (questions, analysis)
+    if (text.match(/\b(why|how|what if|I think|I wonder|realize)\b/)) return 'thought'
+
+    // Default to thought (safest)
+    return 'thought'
   }
 
   const handleOrganize = async () => {
@@ -116,6 +150,13 @@ export default function ChamberClient({ something: initialSomething }: ChamberCl
         longitude?: number
         formatted_address?: string
         tags?: string[]
+        attributes?: {
+          mind_category?: 'experience' | 'thought' | 'desire'
+          why?: string
+          desire_intensity?: number
+          desire_status?: 'nascent' | 'active' | 'fulfilled'
+          sun_domain?: string
+        }
       } = {
         realm,
         care
@@ -130,12 +171,31 @@ export default function ChamberClient({ something: initialSomething }: ChamberCl
         }
       }
 
-      if (realm === 'mind' && tags.trim()) {
+      if (realm === 'mind') {
+        // Mind-specific attributes (Story 2.4 PATCH)
+        payload.attributes = {
+          mind_category: mindCategory,
+          sun_domain: why.trim() ? undefined : 'somewhere' // Auto-assign 'somewhere' if no why
+        }
+
+        // Add why if provided
+        if (why.trim()) {
+          payload.attributes.why = why.trim()
+        }
+
+        // Add desire-specific fields if category is 'desire'
+        if (mindCategory === 'desire') {
+          payload.attributes.desire_intensity = desireIntensity
+          payload.attributes.desire_status = desireStatus
+        }
+
         // Parse comma-separated tags
-        payload.tags = tags
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(tag => tag.length > 0)
+        if (tags.trim()) {
+          payload.tags = tags
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(tag => tag.length > 0)
+        }
       }
 
       // Call organize API
@@ -369,22 +429,170 @@ export default function ChamberClient({ something: initialSomething }: ChamberCl
               </div>
             )}
 
-            {/* Conditional: Tags for Mind */}
+            {/* Mind Category Dropdown (Story 2.4 PATCH) */}
             {realm === 'mind' && (
-              <div className="mb-6">
-                <label htmlFor="tags-input" className="block text-sm text-gray-300 mb-2">
-                  🏷️ Tags
-                </label>
-                <input
-                  id="tags-input"
-                  type="text"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  placeholder="coffee, social, reflection (comma-separated)"
-                  disabled={isSubmitting}
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent disabled:opacity-50"
-                />
-              </div>
+              <>
+                <div className="mb-6 pb-6 border-b border-gray-800">
+                  <label className="block text-sm text-gray-300 mb-3">
+                    What kind of Mind something is this?
+                  </label>
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-3 p-3 border border-gray-700 rounded-md cursor-pointer hover:bg-gray-800/50 transition">
+                      <input
+                        type="radio"
+                        name="mindCategory"
+                        value="experience"
+                        checked={mindCategory === 'experience'}
+                        onChange={(e) => setMindCategory(e.target.value as 'experience')}
+                        disabled={isSubmitting}
+                        className="mt-1 cursor-pointer"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium">🎭 Experience (Past Memory)</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Something that happened - a memory, event, or moment in time
+                        </div>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 p-3 border border-gray-700 rounded-md cursor-pointer hover:bg-gray-800/50 transition">
+                      <input
+                        type="radio"
+                        name="mindCategory"
+                        value="thought"
+                        checked={mindCategory === 'thought'}
+                        onChange={(e) => setMindCategory(e.target.value as 'thought')}
+                        disabled={isSubmitting}
+                        className="mt-1 cursor-pointer"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium">💭 Thought (Present Reflection)</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          A reflection, insight, question, or analysis about something
+                        </div>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-3 p-3 border border-gray-700 rounded-md cursor-pointer hover:bg-gray-800/50 transition">
+                      <input
+                        type="radio"
+                        name="mindCategory"
+                        value="desire"
+                        checked={mindCategory === 'desire'}
+                        onChange={(e) => setMindCategory(e.target.value as 'desire')}
+                        disabled={isSubmitting}
+                        className="mt-1 cursor-pointer"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium">✨ Desire (Future Aspiration)</div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Something you want - a goal, aspiration, or future intention
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Why Field (Story 2.4 PATCH) */}
+                <div className="mb-6">
+                  <label htmlFor="why-field" className="block text-sm text-gray-300 mb-2">
+                    Why does this matter to you? <span className="text-gray-500">(optional but encouraged)</span>
+                  </label>
+                  <textarea
+                    id="why-field"
+                    value={why}
+                    onChange={(e) => setWhy(e.target.value)}
+                    placeholder={
+                      mindCategory === 'experience'
+                        ? "What makes this memory meaningful? How did it shape you?"
+                        : mindCategory === 'desire'
+                        ? "Why do you want this? What deeper need does it fulfill?"
+                        : "Why is this thought important? What does it reveal?"
+                    }
+                    disabled={isSubmitting}
+                    maxLength={1000}
+                    rows={3}
+                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent disabled:opacity-50 resize-y"
+                  />
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="text-xs">
+                      {why.trim() ? (
+                        <span className="text-green-400">✨ Organized</span>
+                      ) : (
+                        <span className="text-gray-500">🗑️ Somewhere (will stay unorganized until you add a &quot;why&quot;)</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {why.length}/1000
+                    </div>
+                  </div>
+                </div>
+
+                {/* Desire-Specific Fields (Story 2.4 PATCH) */}
+                {mindCategory === 'desire' && (
+                  <div className="mb-6 pb-6 border-b border-gray-800">
+                    <div className="text-xs text-gray-400 mb-4">
+                      These help you track the lifecycle of your desires - but they&apos;re optional
+                    </div>
+
+                    {/* Intensity Slider */}
+                    <div className="mb-4">
+                      <label htmlFor="desire-intensity" className="block text-sm text-gray-300 mb-2">
+                        How strong is this desire?
+                      </label>
+                      <input
+                        id="desire-intensity"
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={desireIntensity}
+                        onChange={(e) => setDesireIntensity(parseFloat(e.target.value))}
+                        disabled={isSubmitting}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>Mild</span>
+                        <span>Moderate</span>
+                        <span>Strong</span>
+                        <span>Intense</span>
+                      </div>
+                    </div>
+
+                    {/* Status Dropdown */}
+                    <div>
+                      <label htmlFor="desire-status" className="block text-sm text-gray-300 mb-2">
+                        Where is this desire in its journey?
+                      </label>
+                      <select
+                        id="desire-status"
+                        value={desireStatus}
+                        onChange={(e) => setDesireStatus(e.target.value as 'nascent' | 'active' | 'fulfilled')}
+                        disabled={isSubmitting}
+                        className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent disabled:opacity-50"
+                      >
+                        <option value="nascent">Nascent - Just discovered this want</option>
+                        <option value="active">Active - Actively pursuing this</option>
+                        <option value="fulfilled">Fulfilled - Already achieved</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tags for Mind */}
+                <div className="mb-6">
+                  <label htmlFor="tags-input" className="block text-sm text-gray-300 mb-2">
+                    🏷️ Tags
+                  </label>
+                  <input
+                    id="tags-input"
+                    type="text"
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                    placeholder="coffee, social, reflection (comma-separated)"
+                    disabled={isSubmitting}
+                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent disabled:opacity-50"
+                  />
+                </div>
+              </>
             )}
 
             {/* Care Slider (Universal) */}

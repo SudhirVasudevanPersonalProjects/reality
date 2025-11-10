@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -17,7 +17,7 @@ export async function DELETE(
       )
     }
 
-    const somethingId = params.id
+    const { id: somethingId } = await params
 
     // Verify user owns this something before deleting (RLS will also enforce this)
     const { data: something, error: fetchError } = await supabase

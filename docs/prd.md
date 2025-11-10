@@ -792,6 +792,343 @@ reality/
 - If real-time collab needed: Add WebSocket server
 - Current architecture supports gradual migration
 
+**Local Development Notes:**
+- **Cache Revalidation**: When testing in local development, you may need to perform an extra page reload to see changes reflected in the UI due to Next.js cache behavior with production-like settings. This is expected behavior and not a bug - always reload twice when testing CRUD operations locally to ensure you see the latest data.
+
+---
+
+## Mind's Abode: Architecture & Philosophy
+
+### Core Concept: Abode of Abodes
+
+**Mind's Abode** is not a single flat space—it is a **cosmos of inner universes**, each organized around "suns" (organizing domains). Mental somethings (thoughts, experiences, desires) orbit these suns based on care rating, frequency of occurrence, and most importantly, **meaning** ("why this matters").
+
+This architecture reflects how humans actually organize their inner reality: not in rigid categories, but in meaningful constellations around emotional and semantic centers of gravity.
+
+---
+
+### The Two Abodes
+
+```
+          ∞ (unbounded above)
+          │
+    ┌─────────────┐
+    │   MIND'S    │  ← Inner reality (thoughts, memories, desires)
+    │   ABODE     │     Organized by suns: Beauty, Ugly, Dreams, Somewhere, +custom
+    │             │     Three temporal dimensions: Experience, Thought, Desire
+    ├─────────────┤
+    │  PHYSICAL   │  ← Outer reality (locations, physical spaces)
+    │   ABODE     │     Organized spatially on 3D map
+    └─────────────┘
+          │
+          ▼
+```
+
+**Physical Abode** (Outer Reality):
+- **What it maps**: Places, locations, physical spaces in the world
+- **Organization**: Spatial coordinates (lat/lng), visible on 3D map
+- **Attributes**: Location name, care (Ugly → Beautiful), timestamps
+- **Visualization**: 3D bird's-eye map with markers, building extrusions
+- **Most Experiences live here**: Physical locations anchor memories
+
+**Mind's Abode** (Inner Reality):
+- **What it maps**: Thoughts, memories (Experiences), desires/aspirations
+- **Organization**: "Suns" (Beauty/Ugly/Dreams/Somewhere/custom domains)
+- **Attributes**: Care (Hate → Love), why (deeper meaning), category, connections
+- **Visualization**: Pokémon-style cards with attributes and connections
+- **Three temporal dimensions**: Experience (past), Thought (present), Desire (future)
+
+---
+
+### Mind's Three Temporal Dimensions
+
+Every mental something exists in one of three temporal categories. These are **starting card templates** - users can create custom templates in future phases.
+
+#### 🎭 **EXPERIENCE** (Past - "What happened")
+
+**Nature**: Past-oriented memories, captured moments, narrative reflections
+
+**Examples**:
+- "First visit to SD Zoo with Sarah - saw pandas, felt peaceful"
+- "Grandma's funeral - she played piano every Sunday"
+- "Coffee with John at Philz - had breakthrough conversation"
+
+**Attributes**:
+- `when`: captured_at timestamp
+- `where`: Often linked to Physical Abode location (optional)
+- `care`: Emotional response to memory (1=Hate, 5=Love)
+- `why`: What makes this memory meaningful? How did it shape you?
+- `media`: Photos/videos from the moment
+- `connections`: Links to Thoughts (what this revealed) and Desires (what this inspired)
+
+**Card Badge**: 🎭 EXPERIENCE · Past Memory
+
+**Lives in**: Physical Abode (if location-based) OR Mind Abode
+
+**Orbits**: Beauty/Ugly/Dreams suns based on care and meaning
+
+**Shareable** (future): Friends can contribute their memories to shared experiences
+
+---
+
+#### 💭 **THOUGHT** (Present - "What I think/reflect")
+
+**Nature**: Present-moment sense-making, analysis, insights, questions, reflections
+
+**Examples**:
+- "Why do I procrastinate? Fear of failure blocks me."
+- "Music connects people across time and space"
+- "I need to prioritize family over career advancement"
+
+**Attributes**:
+- `when`: captured_at (when reflected)
+- `where`: Usually no physical location (abstract)
+- `care`: How you feel about this thought (1=Hate, 5=Love)
+- `why`: Why is this thought important? What does it reveal?
+- `nesting`: Can contain nested thoughts (recursive reflection)
+- `connections`: Links to Experiences (what triggered this), Desires (what this reveals), other Thoughts
+
+**Card Badge**: 💭 THOUGHT · Reflection
+
+**Lives in**: Mind Abode only
+
+**Orbits**: Beauty/Ugly/Dreams suns
+
+**Note**: "Present" is semantic—the whole app captures the past, but Thoughts represent current sense-making about that past.
+
+---
+
+#### ✨ **DESIRE** (Future - "What I want")
+
+**Nature**: Future-oriented goals, wants, aspirations, motivations
+
+**Examples**:
+- "Learn to play Für Elise on piano"
+- "Travel to Japan and experience cherry blossom season"
+- "Call Mom every week to maintain connection"
+
+**Attributes**:
+- `when`: captured_at (when desire identified)
+- `where`: Usually no location (but can link to Physical location as destination)
+- `care`: How you feel about wanting this (1=Hate, 5=Love)
+- `why`: **Critical** - Why do you want this? What deeper need does it fulfill?
+- `intensity`: 0.0 (mild interest) → 1.0 (burning need) - optional
+- `status`: Nascent → Active → Fulfilled (lifecycle tracking) - optional
+- `dependencies`: Other Desires that must be fulfilled first (via Connections)
+- `connections`: Links to Experiences (what fulfills this), Thoughts (what this stems from)
+
+**Card Badge**: ✨ DESIRE · Future Aspiration
+
+**Lives in**: Mind Abode only
+
+**Orbits**: Usually Dreams sun (aspirational), but can be in Beauty/Ugly
+
+**Fulfillment Tracking**: When fulfilled, can link to the Experience that satisfied it
+
+---
+
+### The "Why" Field: Gateway to Organization
+
+**Philosophy**: "Why does this matter?" is the question that transforms raw capture into meaningful memory.
+
+**Significance**:
+- **Somewhere Abode** (unorganized): Somethings with no "why" assigned yet
+- **Sun Universes** (organized): Somethings with "why" field populated—they have meaning
+
+**Why can be**:
+- **Freeform text**: "This memory matters because it showed me what true friendship looks like"
+- **Connection to another something**: Link to Experience/Thought/Desire that explains meaning
+- **Both**: Text explanation + visual connection
+
+**Effect**:
+- Empty why → stays in "🗑️ Somewhere" (unorganized abode)
+- Populated why → moves to organized sun universe (Beauty/Ugly/Dreams/custom)
+
+**Example**:
+```
+Experience: "Grandma's funeral"
+Why: "This was the moment I realized music connects us across generations.
+      She expressed love through piano - I want to honor that by learning."
+
+→ Creates connections to:
+  - Thought: "Music connects people across time"
+  - Desire: "Learn to play Für Elise on piano"
+```
+
+---
+
+### Suns: Organizing Domains (The "Abode of Abodes" Metaphor)
+
+**Concept**: Mind's Abode contains multiple **universes**, each centered around a "sun" (organizing domain). Somethings orbit these suns based on care rating, frequency, and meaning.
+
+**Default Suns**:
+- ☀️ **Beauty**: Somethings you love, cherish, find beautiful (care rating 4-5)
+- 🌑 **Ugly**: Somethings you dislike, find difficult, painful (care rating 1-2)
+- 💫 **Dreams**: Aspirations, desires, future-oriented somethings (mostly Desires)
+- 🗑️ **Somewhere**: Default state - unorganized, no "why" assigned yet
+
+**Custom Suns** (future):
+- Users define their own organizing domains
+- Examples: "Career", "Family", "Creativity", "Nature", "Spirituality"
+- Each sun acts as semantic attractor for related somethings
+
+**Hierarchy Within Suns**:
+Somethings within each sun are ordered by:
+1. **Care rating**: Higher care = more prominent (brighter in UI)
+2. **Care frequency**: How often you return to this (revisits, recurring thoughts)
+3. **Subjective factor** (TBD): User-defined importance, manual pinning
+
+**Visual Metaphor**:
+```
+       ☀️ BEAUTY SUN
+       /    |    \
+    •••    ••    •••••
+   Thoughts  Exp  Desires
+   (care 5) (4)  (care 5)
+```
+
+Bright somethings (high care) appear closer to the sun's core, dimmer ones (lower care) orbit further out.
+
+---
+
+### Connections: The Web of Meaning
+
+**Universal Entity**: ANY something can connect to ANY other something with:
+- **Relationship type**: User-extensible vocabulary (reveals, fulfills, questions, caused, depends_on, etc.)
+- **Meaning**: Why this connection exists—the semantic content
+- **Strength**: Optional 1-10 rating (how strong is this relationship?)
+
+**Connection Types**:
+```
+reveals    - "Experience X reveals Desire Y"
+fulfills   - "Experience X fulfills Desire Y"
+questions  - "Thought X questions Thought Y"
+caused     - "Experience X caused Thought Y"
+depends_on - "Desire X depends on Desire Y being fulfilled first"
+builds_on  - "Thought X builds on Thought Y"
+contrasts  - "Experience X contrasts with Experience Y"
+```
+
+**Example Connection Web**:
+```
+Experience: "Grandma's funeral"
+    ↓ reveals
+Desire: "Learn piano"
+    ↓ depends_on
+Desire: "Buy piano" (fulfilled ✓)
+    ↓ fulfills
+Experience: "Bought Yamaha U1" (same model as Grandma's)
+    ↓ caused
+Thought: "This feels sacred - like she's here"
+```
+
+**Bidirectional Navigation**:
+- From any card, see all connections (incoming + outgoing)
+- Click connection → Navigate to connected card
+- Traverse your inner reality like a graph
+
+**This is how you solve the mind**: By mapping the web of connections between what happened (Experience), what you think (Thought), and what you want (Desire).
+
+---
+
+### The Infinite Temporal Loop
+
+Experiences, Thoughts, and Desires form a self-reinforcing cycle:
+
+```
+DESIRE (I want to learn piano)
+   ↓
+THOUGHT (How do I get it? Why do I want this? What's blocking me?)
+   ↓
+ACTION (in physical reality - not captured in system)
+   ↓
+EXPERIENCE (First piano lesson - captured moment)
+   ↓
+THOUGHT (What did this mean? How do I feel? What did I learn?)
+   ↓
+DESIRE (New wants emerge: "Perform Für Elise at Thanksgiving")
+   ↓
+[LOOP CONTINUES INFINITELY]
+```
+
+**Acting** is the bridge between mental states and lived reality:
+- Acting happens in the physical world (outside the system)
+- The system captures the **before** (Desire + planning Thoughts)
+- The system captures the **during** (reflective Thoughts while acting)
+- The system captures the **after** (Experience with media/location)
+
+**Meaning emerges from connections**:
+- Connect Desires to Thoughts: Understand your motivations
+- Connect Experiences to Thoughts: Make sense of what happened
+- Connect Experiences to Desires: Track fulfillment and emergence of new wants
+- Connect Thoughts to Thoughts: Build understanding recursively
+
+---
+
+### Data Model Summary
+
+**Core Tables**:
+```sql
+-- Universal something entity
+CREATE TABLE somethings (
+  id UUID,
+  user_id UUID,
+  realm TEXT,              -- 'physical' | 'mind'
+  text_content TEXT,
+  media_url TEXT,
+
+  -- Physical attributes
+  latitude DECIMAL,
+  longitude DECIMAL,
+  location_name TEXT,
+
+  -- Mind attributes (stored in JSONB for flexibility)
+  attributes JSONB,  -- {
+                     --   mind_category: 'experience' | 'thought' | 'desire',
+                     --   why: "deeper meaning",
+                     --   sun_domain: 'beauty' | 'ugly' | 'dreams' | 'somewhere' | custom,
+                     --   desire_intensity: 0.0-1.0,
+                     --   desire_status: 'nascent' | 'active' | 'fulfilled'
+                     -- }
+
+  -- Universal
+  care INT,                -- 1-5 (Hate/Ugly → Love/Beautiful)
+  care_frequency INT,      -- How often revisited
+  captured_at TIMESTAMPTZ
+)
+
+-- Universal connection entity
+CREATE TABLE connections (
+  id UUID,
+  user_id UUID,
+  from_something_id UUID,
+  to_something_id UUID,
+  relationship_type TEXT,  -- User-extensible: reveals, fulfills, depends_on, etc.
+  meaning TEXT,            -- Why this connection exists (the CORE)
+  strength INT,            -- Optional 1-10
+  created_at TIMESTAMPTZ
+)
+```
+
+**Flexible Schema**:
+- `attributes` JSONB column allows experimentation with new fields
+- Connection relationship_type is user-extensible (unlimited vocabulary)
+- Future: Custom sun domains, custom card templates, custom attributes
+
+---
+
+### Future Extensibility
+
+**Phase 2+**:
+- **Custom Card Templates**: Users define their own temporal categories beyond Experience/Thought/Desire
+- **Custom Suns**: User-created organizing domains with custom hierarchy rules
+- **Advanced Connections**: Multi-way connections (3+ somethings), connection strengths, connection types
+- **AI-Suggested Connections**: Pookie analyzes your somethings and suggests meaningful connections
+- **Shared Experiences**: Multi-user Experiences with participants (like shared photo albums, but richer)
+- **Dependency Graphs**: Visual dependency tree for Desires (see what's blocking what)
+
+**The architecture is designed to get out of your way** and let you map your inner reality however you experience it—messy, non-linear, deeply interconnected.
+
 ---
 
 ## Epic List
@@ -808,11 +1145,19 @@ The following epics represent the logical development sequence for My Reality. E
 
 ---
 
-### Epic 2: Chamber of Reflection & Three Realms Organization
+### Epic 2: Chamber of Reflection & Mind's Abode Foundation
 
-**Goal**: Build the Chamber of Reflection portal where users triage unorganized captures one-by-one, classify them into Reality/Mind/Heart realms with user-defined hierarchies, care ratings, tags, and flexible organizational dimensions.
+**Goal**: Build the Chamber of Reflection portal where users triage unorganized captures into Physical or Mind abodes. For Mind somethings, classify into three temporal dimensions (Experience/Thought/Desire), assign "why" field for meaning, and visualize in Pokémon-style cards. Implement connections infrastructure to link somethings together, forming the web of meaning.
 
-**Value**: Transform chaotic captures into structured "my reality" through intentional reflection. Prevents psychic entropy via bounded, feeling-based organization.
+**Value**: Transform chaotic captures into organized inner/outer reality. Physical map shows WHERE experiences occurred in space. Mind cards show WHAT you think/remember/want with WHY it matters. Connections reveal HOW everything relates. This is the foundation for solving the mind—mapping the web between past (Experience), present (Thought), and future (Desire).
+
+**Architecture Delivered**:
+- ✅ Two Abodes: Physical (3D map) + Mind (card universe)
+- ✅ Three Temporal Dimensions: Experience (past), Thought (present), Desire (future)
+- ✅ "Why" Field: Gateway from "Somewhere" (unorganized) to organized suns
+- ✅ Connections Table: Universal link between any somethings with meaning/relationship
+- ✅ Pokémon Cards: Rich attribute display for Mind somethings
+- ✅ Chamber Workflow: Physical vs Mind selection, category assignment, why field capture
 
 ---
 
@@ -976,3 +1321,182 @@ This approach ensures:
 **🤖 Generated with [Claude Code](https://claude.com/claude-code)**
 
 **Co-Authored-By: PM John (BMAD-METHOD™)**
+
+# Future Enhancements & Feature Ideas
+
+## Deep-Capture Page
+
+### Rocket Send Animation Enhancement
+**Status**: Future Enhancement
+**Priority**: Nice-to-have / Polish
+**Date Added**: 2025-11-09
+
+**Current State**:
+- Rocket flies away when send is clicked
+- Simple animation (flies to corner and disappears)
+
+**Proposed Enhancement**:
+Full animated sequence when rocket is clicked:
+1. All somethings in the package animate/fly toward center
+2. Somethings visually "pack" into a box/package
+3. Package hops/jumps into the rocket
+4. Rocket flies off with the package
+5. Then navigate to Live-Capture
+
+**Technical Notes**:
+- Could use Framer Motion or CSS keyframe animations
+- Sequence timing: ~2-3 seconds total
+- Make skippable or add reduced-motion preference check
+- Coordinate with navigation delay (currently 1 second)
+
+**User Experience**:
+- More delightful and playful interaction
+- Visual confirmation of what's being sent
+- Matches the metaphor of "packaging" and "sending"
+
+---
+
+## Link Preview
+
+### Real Link Metadata Fetching
+**Status**: Current Placeholder Implementation
+**Priority**: Medium
+**Date Added**: 2025-11-09
+
+**Current State**:
+- `fetchLinkMetadata()` returns basic URL info
+- No actual OpenGraph/metadata scraping
+
+**Proposed Enhancement**:
+- Implement server-side metadata fetching (avoid CORS)
+- Support OpenGraph, Twitter Cards, oEmbed
+- Show real thumbnails for:
+  - YouTube videos
+  - Instagram posts
+  - TikTok videos
+  - Twitter/X posts
+  - General websites
+
+**Technical Notes**:
+- Create API route `/api/link-preview`
+- Use libraries like `open-graph-scraper` or similar
+- Cache results to avoid repeated fetches
+- Handle rate limits for social media platforms
+
+---
+
+## OCR / Text Extraction
+
+### Better OCR with OpenAI Vision API
+**Status**: Removed (was using Tesseract.js)
+**Priority**: Medium
+**Date Added**: 2025-11-09
+
+**Current State**:
+- OCR completely removed (was poor quality)
+- All images treated as photos
+
+**Proposed Enhancement**:
+- Use OpenAI Vision API for text extraction
+- Better accuracy for handwritten text
+- Better handling of complex layouts
+- Multi-language support
+
+**Technical Notes**:
+- API route to handle image → GPT-4 Vision → extracted text
+- Cost consideration: ~$0.01 per image
+- User can still edit extracted text before sending
+- Keep option to skip OCR and just upload as photo
+
+---
+
+## Audio Transcription
+
+### WhisperLive or OpenAI Whisper Integration
+**Status**: Placeholder (currently no transcription)
+**Priority**: Low
+**Date Added**: 2025-11-09
+
+**Current State**:
+- Audio files upload without transcription
+- Shows "Audio transcription not yet supported"
+
+**Proposed Enhancement**:
+- Integrate OpenAI Whisper API for transcription
+- Or use WhisperLive for real-time transcription
+- Generate text_content from audio automatically
+
+**Technical Notes**:
+- API route for audio → Whisper → text
+- Show loading state during transcription
+- Allow user to edit/review transcript
+- Keep original audio file + transcript
+
+---
+
+## Performance Optimizations
+
+### Image Compression Before Upload
+**Status**: Future Enhancement
+**Priority**: Low
+**Date Added**: From QA review
+
+**Description**:
+- Compress images client-side before upload
+- Reduce file sizes for faster uploads
+- Use browser Canvas API or library like `browser-image-compression`
+
+### Lazy Load Tesseract.js (if re-enabled)
+**Status**: N/A (OCR removed)
+**Priority**: N/A
+
+**Description**:
+- If OCR is re-enabled, lazy load the Tesseract library
+- Reduces initial bundle size (~2MB)
+
+---
+
+## UI/UX Improvements
+
+### Next.js Image Component
+**Status**: Linting Warning
+**Priority**: Low
+**Date Added**: From QA review
+
+**Description**:
+- Replace `<img>` tags with Next.js `<Image />` component
+- Better performance (automatic optimization, lazy loading)
+- Reduced bandwidth usage
+
+**Files to Update**:
+- `app/deep-capture/DeepCaptureClient.tsx`
+- `app/components/LinkPreviewCard.tsx`
+- `app/components/SomethingContent.tsx`
+- Others (see lint warnings)
+
+---
+
+## Ideas Log
+
+### Batch Operations UI
+- Allow selecting multiple items in package
+- Bulk delete
+- Reorder items before sending
+
+### Undo/Redo
+- Undo delete actions
+- Redo split/merge operations
+
+### Keyboard Shortcuts
+- Enter to add to package
+- Cmd/Ctrl+Enter to send
+- Cmd/Ctrl+Z for undo
+
+### Save Draft
+- Save current package state to localStorage
+- Resume later if user navigates away
+- "You have unsent items" reminder
+
+---
+
+*This document tracks future enhancement ideas for the Deep-Capture page and related features.*

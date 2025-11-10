@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import LiveCaptureClient from './LiveCaptureClient'
+import DeepCaptureClient from './DeepCaptureClient'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CapturePage() {
+export default async function DeepCapturePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -12,5 +12,5 @@ export default async function CapturePage() {
     redirect('/login')
   }
 
-  return <LiveCaptureClient />
+  return <DeepCaptureClient />
 }

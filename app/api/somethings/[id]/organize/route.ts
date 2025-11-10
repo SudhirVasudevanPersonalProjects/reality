@@ -32,7 +32,7 @@ export async function PATCH(
       )
     }
 
-    const { realm, care, location_name, latitude, longitude, formatted_address, tags } = validation.data
+    const { realm, care, location_name, latitude, longitude, formatted_address, tags, attributes } = validation.data
     const somethingId = params.id
 
     // Verify user owns this something
@@ -89,6 +89,11 @@ export async function PATCH(
         updateData.formatted_address = formatted_address || null
         updateData.visited = true // Mark as visited when coordinates captured
       }
+    }
+
+    // Mind-specific fields (Story 2.4 PATCH)
+    if (realm === 'mind' && attributes) {
+      updateData.attributes = attributes
     }
 
     // Update somethings record
