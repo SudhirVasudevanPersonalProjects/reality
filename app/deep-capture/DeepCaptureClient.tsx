@@ -229,91 +229,88 @@ export default function DeepCaptureClient() {
     }
   }, [packagedItems])
 
-  // Handle rocket ship send
-  const handleSend = async () => {
-    // Validate at least 1 something to submit
-    const validItems = packagedItems.filter(item => !item.processing && !item.error)
-    if (validItems.length === 0) {
-      setError('Please add some text or upload files before sending')
-      return
-    }
 
-    setError(null)
-    setIsSubmitting(true)
-
-    try {
-      // Group items: text/links go together, media files go together
-      const textAndLinks = validItems.filter(item => item.type === 'text' || item.type === 'link')
-      const fileItems = validItems.filter(item => item.type === 'photo' || item.type === 'video' || item.type === 'audio')
-
-      const submissions: Promise<Response>[] = []
-
-      // Submit text items
-      for (const item of textAndLinks) {
-        const formData = new FormData()
-
-        if (item.type === 'link') {
-          formData.append('text_content', item.content)
-          if (item.linkPreview) {
-            formData.append('attributes', JSON.stringify({ link_preview: item.linkPreview }))
-          }
-        } else {
-          formData.append('text_content', item.content)
-        }
-
-        submissions.push(fetch('/api/somethings', {
-          method: 'POST',
-          body: formData
-        }))
-      }
-
-      // Submit files (API expects 'files' in FormData)
-      if (fileItems.length > 0) {
-        const fileFormData = new FormData()
-
-        for (const item of fileItems) {
-          if (item.file) {
-            fileFormData.append('files', item.file)
-          }
-        }
-
-        submissions.push(fetch('/api/somethings', {
-          method: 'POST',
-          body: fileFormData
-        }))
-      }
-
-      // Wait for all submissions
-      const results = await Promise.all(submissions)
-      const failures = results.filter(r => !r.ok)
-
-      if (failures.length > 0) {
-        // Log the error details for debugging
-        for (const failure of failures) {
-          const errorText = await failure.text()
-          console.error('Submission failed:', failure.status, errorText)
-        }
-        throw new Error(`${failures.length} items failed to submit`)
-      }
-
-      // Start rocket animation
-      setIsAnimating(true)
-
-      // Wait for rocket animation (1 second) THEN navigate
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Clear Live-Capture localStorage before navigating
-      localStorage.removeItem('liveCaptureText')
-
-      // Navigate back to Live-Capture - this should happen smoothly after animation
-      router.push('/capture')
-    } catch (err) {
-      console.error('Failed to submit somethings:', err)
-      setError('Failed to submit. Please try again.')
-      setIsSubmitting(false)
-      setIsAnimating(false)
-    }
+// Handle rocket ship send
+const handleSend = async () => {
+  // Validate at least 1 something to submit
+  const validItems = packagedItems.filter(item => !item.processing && !item.error)
+  if (validItems.length === 0) {
+    setError('Please add some text or upload files before sending')
+    return
   }
+
+  setError(null)
+  setIsSubmitting(true)
+
+  try {
+    // Group items: text/links go together, media files go together
+    const textAndLinks = validItems.filter(item => item.type === 'text' || item.type === 'link')
+    const fileItems = validItems.filter(item => item.type === 'photo' || item.type === 'video' || item.type === 'audio')
+
+    const submissions: Promise<Response>[] = []
+
+    // Submit text items
+    for (const item of textAndLinks) {
+      const formData = new FormData()
+
+      if (item.type === 'link') {
+        formData.append('text_content', item.content)
+        if (item.linkPreview) {
+          formData.append('attributes', JSON.stringify({ link_preview: item.linkPreview }))
+        }
+      } else {
+        formData.append('text_content', item.content)
+      }
+
+      submissions.push(fetch('/api/somethings', {
+        method: 'POST',
+        body: formData
+      }))
+    }
+
+    // Submit files **one at a time** (instead of batching)
+    for (const item of fileItems) {
+      if (!item.file) continue
+      const fileFormData = new FormData()
+      fileFormData.append('files', item.file)
+
+      submissions.push(fetch('/api/somethings', {
+        method: 'POST',
+        body: fileFormData
+      }))
+    }
+
+    // Wait for all submissions
+    const results = await Promise.all(submissions)
+    const failures = results.filter(r => !r.ok)
+
+    if (failures.length > 0) {
+      // Log the error details for debugging
+      for (const failure of failures) {
+        const errorText = await failure.text()
+        console.error('Submission failed:', failure.status, errorText)
+      }
+      throw new Error(`${failures.length} items failed to submit`)
+    }
+
+    // Start rocket animation
+    setIsAnimating(true)
+
+    // Wait for rocket animation (1 second) THEN navigate
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // Clear Live-Capture localStorage before navigating
+    localStorage.removeItem('liveCaptureText')
+
+    // Navigate back to Live-Capture - this should happen smoothly after animation
+    router.push('/capture')
+  } catch (err) {
+    console.error('Failed to submit somethings:', err)
+    setError('Failed to submit. Please try again.')
+    setIsSubmitting(false)
+    setIsAnimating(false)
+  }
+}
 
   const totalCount = packagedItems.filter(i => !i.processing && !i.error).length
 
