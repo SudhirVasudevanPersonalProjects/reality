@@ -1,0 +1,97 @@
+/**
+ * Hexagonal Lattice Distribution Algorithm
+ *
+ * Creates a rotationally symmetric hexagonal lattice (honeycomb pattern)
+ * that fits inside a circular border. Somethings are placed at vertices.
+ */
+
+export interface Position3D {
+  x: number
+  y: number
+  z: number
+}
+
+/**
+ * Calculate the radius of the circular border based on max somethings allowed
+ */
+export function calculateCircleRadius(maxBound: number): number {
+  // Base radius for 50 somethings (comfortable default)
+  const baseRadius = 50
+  const scale = Math.sqrt(maxBound / 50)
+  return baseRadius * scale
+}
+
+/**
+ * Distribute somethings on a hexagonal lattice within a circular border
+ *
+ * @param count - Number of somethings to place
+ * @param maxBound - Maximum number of somethings allowed (determines circle size)
+ * @returns Array of 3D positions for each something
+ */
+export function distributeOnHexagonalLattice(
+  count: number,
+  maxBound: number
+): Position3D[] {
+  const positions: Position3D[] = []
+
+  // Calculate circle radius based on max bound
+  const circleRadius = calculateCircleRadius(maxBound)
+
+  // Hexagonal lattice spacing
+  // We want to fit maxBound points inside the circle
+  const spacing = (circleRadius * 1.8) / Math.ceil(Math.sqrt(maxBound))
+
+  // Hexagonal lattice parameters
+  const horizontalSpacing = spacing
+  const verticalSpacing = spacing * Math.sqrt(3) / 2 // Height of equilateral triangle
+
+  // Estimate how many rows/cols we need to generate enough points
+  const estimatedRows = Math.ceil(Math.sqrt(count * 1.5))
+  const estimatedCols = Math.ceil(Math.sqrt(count * 1.5))
+
+  // Generate hexagonal lattice points
+  const candidates: Position3D[] = []
+
+  for (let row = -estimatedRows; row <= estimatedRows; row++) {
+    for (let col = -estimatedCols; col <= estimatedCols; col++) {
+      // Hexagonal offset: every other row is shifted by half spacing
+      const rowOffset = Math.abs(row % 2) === 1 ? horizontalSpacing / 2 : 0
+
+      const x = col * horizontalSpacing + rowOffset
+      const z = row * verticalSpacing
+      const y = 0 // All on same plane for now
+
+      // Check if within circular border
+      const distance = Math.sqrt(x * x + z * z)
+
+      // Include points inside circle, and allow edge points to be clipped at border
+      if (distance <= circleRadius) {
+        candidates.push({ x, y, z })
+      }
+    }
+  }
+
+  // Sort by distance from center (spiral pattern outward)
+  candidates.sort((a, b) => {
+    const distA = Math.sqrt(a.x * a.x + a.z * a.z)
+    const distB = Math.sqrt(b.x * b.x + b.z * b.z)
+    return distA - distB
+  })
+
+  // Take first 'count' positions
+  return candidates.slice(0, Math.min(count, candidates.length))
+}
+
+/**
+ * Helper: Check if a position is within the circular border
+ */
+export function isWithinCircle(
+  position: Position3D,
+  circleRadius: number
+): boolean {
+  const distance = Math.sqrt(
+    position.x * position.x +
+    position.z * position.z
+  )
+  return distance <= circleRadius
+}

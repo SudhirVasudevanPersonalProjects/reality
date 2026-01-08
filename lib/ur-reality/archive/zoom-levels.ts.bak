@@ -1,0 +1,97 @@
+/**
+ * Zoom Level Management
+ *
+ * Handles three camera zoom levels with smooth transitions:
+ * 1. Default View (45° angle)
+ * 2. Bird's Eye View (90° angle, far zoom)
+ * 3. Max Zoom Out (extremely far, single dot)
+ */
+
+import * as THREE from 'three'
+
+export const ZOOM_THRESHOLDS = {
+  // Camera distances (NOT object scales - question marks stay constant size)
+  DEFAULT_VIEW_MIN: 50, // Minimum zoom (closest)
+  DEFAULT_VIEW_MAX: 150, // Transition to bird's eye starts
+  BIRDS_EYE_VIEW_MAX: 400, // Transition to max zoom starts
+  MAX_ZOOM_OUT: 1000, // Maximum zoom (single dot)
+}
+
+export enum ZoomLevel {
+  DEFAULT_VIEW = 'DEFAULT_VIEW',
+  BIRDS_EYE_VIEW = 'BIRDS_EYE_VIEW',
+  MAX_ZOOM_OUT = 'MAX_ZOOM_OUT',
+}
+
+/**
+ * Determine current zoom level based on camera distance
+ */
+export function getZoomLevel(cameraDistance: number): ZoomLevel {
+  if (cameraDistance < ZOOM_THRESHOLDS.DEFAULT_VIEW_MAX) {
+    return ZoomLevel.DEFAULT_VIEW
+  } else if (cameraDistance < ZOOM_THRESHOLDS.BIRDS_EYE_VIEW_MAX) {
+    return ZoomLevel.BIRDS_EYE_VIEW
+  } else {
+    return ZoomLevel.MAX_ZOOM_OUT
+  }
+}
+
+/**
+ * Update camera position and angle based on zoom level
+ *
+ * @param camera - Three.js camera
+ * @param targetDistance - Desired camera distance from origin
+ * @param lerpFactor - Interpolation factor (0-1, default 0.1)
+ * @returns Updated camera distance
+ */
+export function updateCameraForZoom(
+  camera: THREE.PerspectiveCamera,
+  targetDistance: number,
+  lerpFactor: number = 0.1
+): number {
+  // Clamp distance within allowed range
+  const clampedDistance = Math.max(
+    ZOOM_THRESHOLDS.DEFAULT_VIEW_MIN,
+    Math.min(ZOOM_THRESHOLDS.MAX_ZOOM_OUT, targetDistance)
+  )
+
+  // Determine camera angle based on zoom level
+  let targetAngle: number // Angle from horizontal (in radians)
+
+  if (clampedDistance < ZOOM_THRESHOLDS.DEFAULT_VIEW_MAX) {
+    // Default View: 20-degree angle (more parallel/flat)
+    targetAngle = Math.PI / 9 // ~20°
+  } else if (clampedDistance < ZOOM_THRESHOLDS.BIRDS_EYE_VIEW_MAX) {
+    // Transition from 20° to 90° (bird's eye)
+    const t =
+      (clampedDistance - ZOOM_THRESHOLDS.DEFAULT_VIEW_MAX) /
+      (ZOOM_THRESHOLDS.BIRDS_EYE_VIEW_MAX - ZOOM_THRESHOLDS.DEFAULT_VIEW_MAX)
+    targetAngle = Math.PI / 9 + (Math.PI * 7 / 18) * t // Interpolate from 20° to 90°
+  } else {
+    // Bird's Eye & Max Zoom Out: 90-degree (straight down)
+    targetAngle = Math.PI / 2 // 90°
+  }
+
+  // Calculate target position based on angle and distance
+  const targetPosition = new THREE.Vector3(
+    0,
+    clampedDistance * Math.sin(targetAngle),
+    clampedDistance * Math.cos(targetAngle)
+  )
+
+  // Smooth lerp to target position
+  camera.position.lerp(targetPosition, lerpFactor)
+
+  // Always look at origin
+  camera.lookAt(0, 0, 0)
+
+  // Return current distance (for state tracking)
+  return camera.position.length()
+}
+
+/**
+ * Calculate camera distance from origin
+ */
+export function getCameraDistance(camera: THREE.Camera): number {
+  return camera.position.length()
+}

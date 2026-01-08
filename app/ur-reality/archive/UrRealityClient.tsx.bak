@@ -1,0 +1,472 @@
+'use client'
+
+import { useState, useEffect, useRef, useMemo } from 'react'
+import * as THREE from 'three'
+import Link from 'next/link'
+import SomethingContent from '@/app/components/SomethingContent'
+
+// Utilities
+import { distributeOnHexagonalLattice, calculateCircleRadius } from '@/lib/ur-reality/hexagonal-lattice'
+import { createUrRealityScene, handleResize, cleanup } from '@/lib/ur-reality/three-scene'
+import { generatePerlinNoiseTexture } from '@/lib/ur-reality/perlin-noise-texture'
+import { renderCircularBorder } from '@/lib/ur-reality/render-border'
+import {
+  loadQuestionMarkTexture,
+  createQuestionMarkSprite,
+  updateFloatingAnimation,
+  setQuestionMarkClicked,
+  updateQuestionMarkLOD,
+  QuestionMarkMesh,
+} from '@/lib/ur-reality/render-question-marks'
+import {
+  updateCameraForZoom,
+  getCameraDistance,
+  getZoomLevel,
+  ZoomLevel,
+} from '@/lib/ur-reality/zoom-levels'
+
+interface Something {
+  id: string
+  text_content: string | null
+  media_url: string | null
+  attributes: any
+  captured_at: string
+}
+
+interface UrRealityClientProps {
+  somethings: Something[]
+  maxBound: number
+}
+
+export default function UrRealityClient({ somethings, maxBound }: UrRealityClientProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const sceneRef = useRef<any>(null)
+  const questionMarksRef = useRef<QuestionMarkMesh[]>([])
+  const animationFrameRef = useRef<number>()
+
+  const [isClient, setIsClient] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [clickedIds, setClickedIds] = useState<Set<string>>(new Set())
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [focusedId, setFocusedId] = useState<string | null>(null)
+  const [cameraDistance, setCameraDistance] = useState(100)
+  const [isPanning, setIsPanning] = useState(false)
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 })
+
+  // Mobile check
+  useEffect(() => {
+    setIsClient(true)
+    const checkViewport = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkViewport()
+    window.addEventListener('resize', checkViewport)
+    return () => window.removeEventListener('resize', checkViewport)
+  }, [])
+
+  // Distribute somethings on hexagonal lattice
+  const positions = useMemo(() => {
+    if (somethings.length === 0) return []
+    return distributeOnHexagonalLattice(somethings.length, maxBound)
+  }, [somethings.length, maxBound])
+
+  // Initialize Three.js scene
+  useEffect(() => {
+    if (!isClient || !canvasRef.current || isMobile) return
+
+    const canvas = canvasRef.current
+    let mounted = true
+
+    const init = async () => {
+      // Create scene
+      const scene = createUrRealityScene({ canvas })
+      sceneRef.current = scene
+      scene.scene.background = new THREE.Color(0x000000) // black
+
+   
+      // === Perlin noise background with central clear area ===
+      const noiseTexture = generatePerlinNoiseTexture(1024, 1024)
+      const borderRadius = calculateCircleRadius(maxBound)
+
+      // Full plane - needs to be large enough to cover screen at max zoom (distance 1000)
+      // At max zoom, camera is at distance 1000, so plane needs to be ~2000 units to fill screen
+      const planeWidth = 3000   // Large enough to cover screen at max zoom
+      const planeHeight = 3000  // Large enough to cover screen at max zoom
+      const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight)
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          noiseMap: { value: noiseTexture },
+          innerRadius: { value: borderRadius },
+          fadeRadius: { value: borderRadius * 0.15 }, // smooth fade around edge
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform sampler2D noiseMap;
+          uniform float innerRadius;
+          uniform float fadeRadius;
+          varying vec2 vUv;
+
+          void main() {
+            // Convert UV coordinates to world space
+            // vUv is 0-1, plane is 3000x3000, so center at (0,0) means vUv (0.5, 0.5)
+            vec2 worldPos = (vUv - 0.5) * 3000.0; // Convert to world coordinates
+            float distFromCenter = length(worldPos);
+
+            // Fade in from innerRadius to innerRadius + fadeRadius
+            float alpha = smoothstep(innerRadius, innerRadius + fadeRadius, distFromCenter);
+
+            vec4 noise = texture2D(noiseMap, vUv);
+            gl_FragColor = vec4(noise.rgb * 0.5+0.5, alpha * 0.6);
+          }
+        `,
+        transparent: true,
+        side: THREE.DoubleSide,
+      })
+      const noisePlane = new THREE.Mesh(geometry, material)
+      noisePlane.rotation.x = -Math.PI / 2
+      noisePlane.position.y = -0.5
+      scene.scene.add(noisePlane)
+
+      // No border line - color separation shows the boundary
+
+      // Load question mark texture
+      const qmTexture = await loadQuestionMarkTexture()
+
+      // Create question marks
+      const qms: QuestionMarkMesh[] = []
+      somethings.forEach((something, index) => {
+        if (!positions[index]) return
+        const qm = createQuestionMarkSprite(positions[index], qmTexture, something.id)
+        
+        qm.mesh.position.y += 2;
+        scene.scene.add(qm.mesh)
+        qms.push(qm)
+      })
+      questionMarksRef.current = qms
+
+      // Handle resize
+      const onResize = () => {
+        if (!mounted) return
+        handleResize(scene.camera, scene.renderer)
+      }
+      window.addEventListener('resize', onResize)
+
+      // Animation loop
+      const animate = (time: number) => {
+        if (!mounted) return
+
+        animationFrameRef.current = requestAnimationFrame(animate)
+
+        // Update floating animation
+        //updateFloatingAnimation(questionMarksRef.current, time)
+
+        // Update LOD based on camera distance
+        const camDist = getCameraDistance(scene.camera)
+        questionMarksRef.current.forEach((qm) => {
+          const distanceToQM = scene.camera.position.distanceTo(qm.mesh.position)
+          updateQuestionMarkLOD(qm, distanceToQM)
+        })
+
+        // Render
+        scene.renderer.render(scene.scene, scene.camera)
+      }
+
+      animate(0)
+
+      return () => {
+        mounted = false
+        window.removeEventListener('resize', onResize)
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current)
+        }
+        cleanup(scene.scene, scene.renderer)
+      }
+    }
+
+    init()
+  }, [isClient, somethings, positions, maxBound, isMobile])
+
+  // Mouse/touch event handlers
+  useEffect(() => {
+    if (!isClient || !canvasRef.current || !sceneRef.current || isMobile) return
+
+    const canvas = canvasRef.current
+    const scene = sceneRef.current
+
+    // Mouse move (hover detection + panning)
+    const onMouseMove = (event: MouseEvent) => {
+      if (isPanning) {
+        // Panning
+        const deltaX = event.clientX - panStart.x
+        const deltaY = event.clientY - panStart.y
+
+        // Update camera position (pan)
+        const panSpeed = 0.1
+        scene.camera.position.x -= deltaX * panSpeed
+        scene.camera.position.z += deltaY * panSpeed
+
+        setPanStart({ x: event.clientX, y: event.clientY })
+      } else {
+        // Hover detection (raycasting)
+        scene.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
+        scene.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
+
+        scene.raycaster.setFromCamera(scene.mouse, scene.camera)
+        const intersects = scene.raycaster.intersectObjects(
+          questionMarksRef.current.map((qm) => qm.mesh)
+        )
+
+        if (intersects.length > 0) {
+          const intersected = intersects[0].object
+          const somethingId = intersected.userData.somethingId
+          if (!clickedIds.has(somethingId) && !focusedId) {
+            setHoveredId(somethingId)
+          }
+        } else {
+          setHoveredId(null)
+        }
+      }
+    }
+
+    // Mouse down (start pan or click question mark)
+    const onMouseDown = (event: MouseEvent) => {
+      // Check if clicked on question mark
+      scene.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
+      scene.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
+
+      scene.raycaster.setFromCamera(scene.mouse, scene.camera)
+      const intersects = scene.raycaster.intersectObjects(
+        questionMarksRef.current.map((qm) => qm.mesh)
+      )
+
+      if (intersects.length > 0) {
+        // Clicked on question mark
+        const somethingId = intersects[0].object.userData.somethingId
+        handleQuestionMarkClick(somethingId)
+      } else {
+        // Clicked on background - clear focus
+        if (focusedId) {
+          setFocusedId(null)
+          // Undarken all question marks
+          questionMarksRef.current.forEach((qm) => {
+            if (clickedIds.has(qm.somethingId)) {
+              setQuestionMarkClicked(qm, false)
+            }
+          })
+          setClickedIds(new Set())
+        }
+        // Start panning
+        setIsPanning(true)
+        setPanStart({ x: event.clientX, y: event.clientY })
+      }
+    }
+
+    // Mouse up (stop pan)
+    const onMouseUp = () => {
+      setIsPanning(false)
+    }
+
+    // Scroll (zoom)
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+
+      // Update camera distance (faster zoom speed)
+      const zoomSpeed = 2.0 // Increased from 0.5 to 2.0 for faster zoom
+      const delta = event.deltaY * zoomSpeed
+      const newDistance = cameraDistance + delta
+
+      // Update camera with smooth transition
+      const updatedDistance = updateCameraForZoom(scene.camera, newDistance, 0.2)
+      setCameraDistance(updatedDistance)
+    }
+
+    canvas.addEventListener('mousemove', onMouseMove)
+    canvas.addEventListener('mousedown', onMouseDown)
+    canvas.addEventListener('mouseup', onMouseUp)
+    canvas.addEventListener('wheel', onWheel, { passive: false })
+
+    return () => {
+      canvas.removeEventListener('mousemove', onMouseMove)
+      canvas.removeEventListener('mousedown', onMouseDown)
+      canvas.removeEventListener('mouseup', onMouseUp)
+      canvas.removeEventListener('wheel', onWheel)
+    }
+  }, [isClient, isPanning, panStart, cameraDistance, clickedIds, focusedId, isMobile])
+
+  // Handle question mark click - zoom to it and display content
+  const handleQuestionMarkClick = (somethingId: string) => {
+    const qm = questionMarksRef.current.find((q) => q.somethingId === somethingId)
+    if (!qm || !sceneRef.current) return
+
+    // Set as focused (locks content open)
+    setFocusedId(somethingId)
+
+    // Zoom camera to the question mark
+    const targetPos = qm.mesh.position
+    const zoomDistance = 30 // Close zoom to the question mark
+
+    // Calculate camera position at an angle above and in front of the question mark
+    const angle = Math.PI / 9 // Same 20° angle as default view
+    const offsetZ = zoomDistance * Math.cos(angle)
+    const offsetY = zoomDistance * Math.sin(angle)
+
+    // Animate camera to new position
+    const targetCameraPos = new THREE.Vector3(
+      targetPos.x,
+      targetPos.y + offsetY,
+      targetPos.z + offsetZ
+    )
+
+    // Smoothly move camera
+    const animateCamera = () => {
+      if (!sceneRef.current) return
+
+      sceneRef.current.camera.position.lerp(targetCameraPos, 0.1)
+      sceneRef.current.camera.lookAt(targetPos)
+
+      const distance = sceneRef.current.camera.position.distanceTo(targetCameraPos)
+      if (distance > 0.5) {
+        requestAnimationFrame(animateCamera)
+      } else {
+        // Animation complete
+        sceneRef.current.camera.position.copy(targetCameraPos)
+        setCameraDistance(sceneRef.current.camera.position.length())
+      }
+    }
+
+    animateCamera()
+
+    // Mark as clicked (darken)
+    setQuestionMarkClicked(qm, true)
+    setClickedIds((prev) => new Set(prev).add(somethingId))
+  }
+
+  // Get hovered or clicked something content
+  const displayedSomethingId = focusedId || hoveredId
+  const displayedSomething = displayedSomethingId
+    ? somethings.find((s) => s.id === displayedSomethingId)
+    : null
+
+  // Handle zoom slider change
+  const handleZoomSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDistance = parseFloat(e.target.value)
+    if (sceneRef.current) {
+      const updatedDistance = updateCameraForZoom(sceneRef.current.camera, newDistance, 0.3)
+      setCameraDistance(updatedDistance)
+    }
+  }
+
+  // Empty state
+  if (somethings.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center text-white">
+        <div className="text-center space-y-4">
+          <p className="text-xl">No somethings captured yet.</p>
+          <Link
+            href="/capture"
+            className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            Start capturing
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Mobile block
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-[#0a1628] flex items-center justify-center text-white px-4">
+        <div className="text-center space-y-4">
+          <p className="text-xl">View on bigger screen</p>
+          <p className="text-sm text-gray-400">ur-reality requires a tablet or desktop</p>
+          <Link
+            href="/capture"
+            className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            Go to Capture
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative w-full h-screen overflow-hidden bg-[#0a1628]">
+      {/* Three.js Canvas */}
+      <canvas ref={canvasRef} className="absolute inset-0" />
+
+      {/* Content overlay (shown when hovering or clicked) */}
+      {displayedSomething && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+          <SomethingContent something={displayedSomething} />
+        </div>
+      )}
+
+      {/* Bottom UI */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col items-center gap-4 pointer-events-none">
+        {/* Zoom slider */}
+        <div className="flex items-center gap-4 pointer-events-auto bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-3">
+          <span className="text-white text-sm">−</span>
+          <input
+            type="range"
+            min="50"
+            max="1000"
+            value={cameraDistance}
+            onChange={handleZoomSliderChange}
+            className="w-48 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+            style={{
+              background: `linear-gradient(to right, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.5) ${((cameraDistance - 50) / (1000 - 50)) * 100}%, rgba(255,255,255,0.2) ${((cameraDistance - 50) / (1000 - 50)) * 100}%, rgba(255,255,255,0.2) 100%)`
+            }}
+          />
+          <span className="text-white text-sm">+</span>
+        </div>
+
+        {/* Bottom controls row */}
+        <div className="w-full flex items-end justify-between">
+          {/* Rocket button (bottom left) */}
+          <button
+            className="w-24 h-24 pointer-events-auto"
+            style={{ background: 'none', border: 'none', outline: 'none' }}
+            onClick={() => {
+              /* Future: Set intention/goal */
+            }}
+          >
+            <div className="text-6xl">🚀</div>
+          </button>
+
+          {/* Search bar (bottom center) - non-functional for now */}
+          <div className="flex-1 max-w-md mx-auto pointer-events-auto">
+            <input
+              type="text"
+              placeholder="Search your somethings..."
+              className="w-full px-6 py-3 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
+              disabled
+            />
+          </div>
+
+          {/* Spacer (bottom right, for symmetry) */}
+          <div className="w-24" />
+        </div>
+      </div>
+
+      {/* Debug info (top right) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="absolute top-4 right-4 bg-black/50 text-white text-xs p-3 rounded font-mono">
+          <div>Somethings: {somethings.length}</div>
+          <div>Max Bound: {maxBound}</div>
+          <div>Camera Distance: {Math.round(cameraDistance)}</div>
+          <div>Zoom Level: {getZoomLevel(cameraDistance)}</div>
+          <div>Hovered: {hoveredId ? 'Yes' : 'No'}</div>
+          <div>Clicked: {clickedIds.size}</div>
+        </div>
+      )}
+    </div>
+  )
+}

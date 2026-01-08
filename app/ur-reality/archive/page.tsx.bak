@@ -24,5 +24,14 @@ export default async function UrRealityPage() {
     return <div>Error loading your reality. Please try again.</div>
   }
 
-  return <UrRealityClient somethings={somethings || []} />
+  // Fetch user's max_somethings_bound
+  const { data: userData } = await supabase
+    .from('users')
+    .select('max_somethings_bound')
+    .eq('id', user.id)
+    .single()
+
+  const maxBound = userData?.max_somethings_bound || 50
+
+  return <UrRealityClient somethings={somethings || []} maxBound={maxBound} />
 }

@@ -1,0 +1,75 @@
+/**
+ * Circular Border Rendering
+ *
+ * Renders the circular boundary separating "Somewhere" (organized somethings)
+ * from "Unknown" (Perlin noise)
+ */
+
+import * as THREE from 'three'
+
+/**
+ * Create and add circular border to scene
+ *
+ * @param scene - Three.js scene
+ * @param radius - Circle radius in world units
+ * @returns The circle mesh for later updates
+ */
+export function renderCircularBorder(
+  scene: THREE.Scene,
+  radius: number
+): THREE.LineLoop {
+  // Create circle curve
+  const curve = new THREE.EllipseCurve(
+    0,
+    0, // Center
+    radius,
+    radius, // X radius, Y radius
+    0,
+    2 * Math.PI, // Start angle, end angle
+    false, // Not clockwise
+    0 // Rotation
+  )
+
+  // Get points on the curve
+  const points = curve.getPoints(128) // 128 segments for smooth circle
+
+  // Convert 2D points to 3D (y=0.1 to float slightly above ground)
+  const points3D = points.map((p) => new THREE.Vector3(p.x, 0.1, p.y))
+
+  // Create geometry
+  const geometry = new THREE.BufferGeometry().setFromPoints(points3D)
+
+  // Create material with glow effect
+  const material = new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    linewidth: 2, // Note: linewidth > 1 doesn't work in WebGL, but keeping for intent
+    transparent: true,
+    opacity: 0.5,
+  })
+
+  // Create line loop (closed circle)
+  const circle = new THREE.LineLoop(geometry, material)
+
+  scene.add(circle)
+
+  return circle
+}
+
+/**
+ * Update border radius (if user's max bound changes)
+ */
+export function updateBorderRadius(
+  border: THREE.LineLoop,
+  newRadius: number
+) {
+  // Recreate geometry with new radius
+  const curve = new THREE.EllipseCurve(0, 0, newRadius, newRadius, 0, 2 * Math.PI, false, 0)
+  const points = curve.getPoints(128)
+  const points3D = points.map((p) => new THREE.Vector3(p.x, 0.1, p.y))
+
+  // Dispose old geometry
+  border.geometry.dispose()
+
+  // Set new geometry
+  border.geometry = new THREE.BufferGeometry().setFromPoints(points3D)
+}

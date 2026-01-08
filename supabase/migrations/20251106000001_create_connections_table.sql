@@ -47,19 +47,19 @@ CREATE TABLE IF NOT EXISTS connections (
 -- =====================================================
 
 -- Index for querying connections by user
-CREATE INDEX idx_connections_user_id ON connections(user_id);
+CREATE INDEX IF NOT EXISTS idx_connections_user_id ON connections(user_id);
 
 -- Index for finding connections FROM a something
-CREATE INDEX idx_connections_from_something ON connections(from_something_id);
+CREATE INDEX IF NOT EXISTS idx_connections_from_something ON connections(from_something_id);
 
 -- Index for finding connections TO a something
-CREATE INDEX idx_connections_to_something ON connections(to_something_id);
+CREATE INDEX IF NOT EXISTS idx_connections_to_something ON connections(to_something_id);
 
 -- Index for bidirectional queries (finding all connections involving a something)
-CREATE INDEX idx_connections_bidirectional ON connections(from_something_id, to_something_id);
+CREATE INDEX IF NOT EXISTS idx_connections_bidirectional ON connections(from_something_id, to_something_id);
 
 -- Index for relationship type filtering
-CREATE INDEX idx_connections_relationship_type ON connections(relationship_type) WHERE relationship_type IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_connections_relationship_type ON connections(relationship_type) WHERE relationship_type IS NOT NULL;
 
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS)
@@ -142,4 +142,3 @@ COMMENT ON TABLE connections IS 'Universal connection entity - links any somethi
 COMMENT ON COLUMN connections.relationship_type IS 'User-extensible relationship vocabulary (reveals, fulfills, questions, caused, depends_on, etc.)';
 COMMENT ON COLUMN connections.meaning IS 'Why this connection exists - the core semantic content of the connection';
 COMMENT ON COLUMN connections.strength IS 'Optional user-defined strength rating (1-10)';
-COMMENT ON CONSTRAINT no_self_connection ON connections IS 'Prevent somethings from connecting to themselves';

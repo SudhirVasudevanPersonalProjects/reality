@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { transcribeAudio, isAudioFile } from '@/lib/transcription/whisper'
 import { fetchLinkMetadata, isValidUrl } from '@/lib/link-preview/fetch-metadata'
+import { fetchLinkThumbnail } from '@/lib/link-preview/fetch-thumbnail'
 import { createClient } from '@/lib/supabase/client'
+import { getCurrentLocation } from '@/lib/capture/get-current-location'
 
 interface ProcessedItem {
   id: string
@@ -189,10 +192,26 @@ export default function DeepCaptureClient() {
     setPackagedItems(prev => [...prev, newItem])
 
     try {
-      const metadata = await fetchLinkMetadata(linkInput)
+      // Fetch both metadata and thumbnail in parallel
+      const [metadata, thumbnail] = await Promise.all([
+        fetchLinkMetadata(linkInput),
+        fetchLinkThumbnail(linkInput)
+      ])
+
+      console.log('📸 Link preview data:', { metadata, thumbnail })
+
+      // Merge thumbnail into metadata if available
+      const linkPreview = {
+        ...metadata,
+        image: thumbnail || metadata.image, // Use 'image' field, not 'thumbnail_url'
+        thumbnail_url: thumbnail || metadata.image
+      }
+
+      console.log('📦 Final linkPreview:', linkPreview)
+
       setPackagedItems(prev => prev.map(item =>
         item.id === linkId
-          ? { ...item, linkPreview: metadata, processing: false }
+          ? { ...item, linkPreview, processing: false }
           : item
       ))
       setLinkInput('') // Clear input after successful add
@@ -243,6 +262,9 @@ const handleSend = async () => {
   setIsSubmitting(true)
 
   try {
+    // Get current location (silent, non-blocking)
+    const location = await getCurrentLocation()
+
     // Group items: text/links go together, media files go together
     const textAndLinks = validItems.filter(item => item.type === 'text' || item.type === 'link')
     const fileItems = validItems.filter(item => item.type === 'photo' || item.type === 'video' || item.type === 'audio')
@@ -262,6 +284,11 @@ const handleSend = async () => {
         formData.append('text_content', item.content)
       }
 
+      if (location) {
+        formData.append('latitude', location.latitude.toString())
+        formData.append('longitude', location.longitude.toString())
+      }
+
       submissions.push(fetch('/api/somethings', {
         method: 'POST',
         body: formData
@@ -273,6 +300,11 @@ const handleSend = async () => {
       if (!item.file) continue
       const fileFormData = new FormData()
       fileFormData.append('files', item.file)
+
+      if (location) {
+        fileFormData.append('latitude', location.latitude.toString())
+        fileFormData.append('longitude', location.longitude.toString())
+      }
 
       submissions.push(fetch('/api/somethings', {
         method: 'POST',
@@ -318,7 +350,7 @@ const handleSend = async () => {
     <div className="min-h-screen bg-[#f5f5dc] text-gray-900 flex flex-col">
       {/* Main content area */}
       <div className="flex-1 overflow-y-auto p-8 pb-32">
-        <div className="max-w-3xl mx-auto space-y-8">
+        <div className="max-w-7xl mx-auto space-y-8">
           {/* Text Input */}
           <div>
             <textarea
@@ -443,11 +475,13 @@ const handleSend = async () => {
                 {totalCount} something{totalCount !== 1 ? 's' : ''} ready to upload
               </p>
 
-              <div className="space-y-3">
-                {packagedItems.map((item) => (
+              <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
+                {packagedItems.slice().reverse().map((item) => (
                   <div
                     key={item.id}
-                    className="relative p-4 bg-white border-2 border-gray-300 rounded-lg shadow-sm"
+                    className={`relative p-4 bg-white border-2 border-gray-300 rounded-lg shadow-sm mb-4 break-inside-avoid ${
+                      item.type === 'link' ? 'w-fit mx-auto' : ''
+                    }`}
                   >
                     {item.processing && (
                       <div className="text-sm text-blue-600">Processing...</div>
@@ -462,10 +496,25 @@ const handleSend = async () => {
                         {item.type === 'text' && (
                           <div>
                             <textarea
-                              className="w-full min-h-[60px] text-base bg-transparent border-none focus:outline-none resize-none pr-8"
+                              ref={(el) => {
+                                if (el) {
+                                  el.style.height = 'auto'
+                                  el.style.height = el.scrollHeight + 'px'
+                                }
+                              }}
+                              className="w-full text-base bg-transparent border-none focus:outline-none resize-y pr-8"
                               value={item.content}
                               onChange={(e) => updateItemContent(item.id, e.target.value)}
                               disabled={isSubmitting}
+                              style={{
+                                minHeight: '24px',
+                                overflow: 'hidden'
+                              }}
+                              onInput={(e) => {
+                                const target = e.target as HTMLTextAreaElement
+                                target.style.height = 'auto'
+                                target.style.height = target.scrollHeight + 'px'
+                              }}
                             />
                           </div>
                         )}
@@ -502,19 +551,62 @@ const handleSend = async () => {
                         )}
 
                         {item.type === 'link' && item.linkPreview && (
-                          <div>
-                            {item.linkPreview.image && (
-                              <img
-                                src={item.linkPreview.image}
-                                alt="Link preview"
-                                className="w-full max-h-48 object-cover rounded mb-2"
-                              />
+                          <div className="flex flex-col items-center">
+                            {/* Thumbnail on top */}
+                            {item.linkPreview.image && (() => {
+                              // Check if this is a Shorts/TikTok URL (vertical video platforms)
+                              const isMobileVideo = item.linkPreview.url.includes('youtube.com/shorts') ||
+                                                    item.linkPreview.url.includes('tiktok.com')
+
+                              if (isMobileVideo) {
+                                // Mobile video (Shorts/TikTok): Keep larger size with crop
+                                const displayHeight = 400 // Scaled up for better visibility
+                                const displayWidth = displayHeight * (9 / 16) // Crop to show mobile portrait view
+
+                                return (
+                                  <div className="relative bg-gray-100 rounded overflow-hidden mb-2" style={{ width: `${displayWidth}px`, height: `${displayHeight}px` }}>
+                                    <Image
+                                      src={item.linkPreview.image}
+                                      alt="Link preview"
+                                      fill
+                                      className="object-cover"
+                                      onError={(e) => {
+                                        console.error('Failed to load thumbnail:', item.linkPreview?.image)
+                                      }}
+                                    />
+                                  </div>
+                                )
+                              } else {
+                                // Regular YouTube video: keep landscape 16:9
+                                return (
+                                  <div className="relative bg-gray-100 rounded overflow-hidden mb-2" style={{ width: 'fit-content', maxWidth: '100%' }}>
+                                    <Image
+                                      src={item.linkPreview.image}
+                                      alt="Link preview"
+                                      width={320}
+                                      height={180}
+                                      className="object-contain"
+                                      style={{ width: 'auto', height: 'auto', maxWidth: '320px' }}
+                                      onError={(e) => {
+                                        console.error('Failed to load thumbnail:', item.linkPreview?.image)
+                                      }}
+                                    />
+                                  </div>
+                                )
+                              }
+                            })()}
+                            {!item.linkPreview.image && (
+                              <div className="text-xs text-gray-500 italic mb-2">
+                                No thumbnail available
+                              </div>
                             )}
+
+                            {/* Link below */}
                             <a
                               href={item.linkPreview.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm italic underline text-black hover:text-gray-700 block"
+                              className="text-sm italic underline text-black hover:text-gray-700 block px-2 text-center break-all outline-none focus:outline-none active:outline-none"
                             >
                               {item.linkPreview.url}
                             </a>

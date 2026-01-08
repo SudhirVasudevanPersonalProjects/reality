@@ -40,6 +40,27 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const textContent = formData.get("text_content") as string | null;
     const files = formData.getAll("files") as File[];
+    const attributesStr = formData.get("attributes") as string | null;
+    const attributes = attributesStr ? JSON.parse(attributesStr) : null;
+
+    // Extract and validate coordinates
+    const latitudeStr = formData.get("latitude") as string | null;
+    const longitudeStr = formData.get("longitude") as string | null;
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+
+    if (latitudeStr && longitudeStr) {
+      const lat = parseFloat(latitudeStr);
+      const lng = parseFloat(longitudeStr);
+
+      // Validate coordinate ranges
+      if (!isNaN(lat) && !isNaN(lng) &&
+          lat >= -90 && lat <= 90 &&
+          lng >= -180 && lng <= 180) {
+        latitude = lat;
+        longitude = lng;
+      }
+    }
 
     // Validate that at least one type of content is provided
     if (!textContent && files.length === 0) {
@@ -59,14 +80,20 @@ export async function POST(request: NextRequest) {
 
     // If text but NO files, create text-only something
     if (trimmedText && trimmedText.length > 0 && files.length === 0) {
+      // Determine content type: if attributes has link_preview, it's a URL, otherwise text
+      const contentType = attributes?.link_preview ? "url" : "text";
+
       const { data: textSomething, error: textError } = await supabase
         .from("somethings")
         .insert({
           user_id: user.id,
           text_content: trimmedText,
-          content_type: "text",
+          content_type: contentType,
+          attributes: attributes,
           realm: null, // Phase 1: No realm classification
           captured_at: new Date().toISOString(),
+          latitude: latitude,
+          longitude: longitude,
         })
         .select("id, text_content, media_url, captured_at")
         .single();
@@ -165,8 +192,11 @@ export async function POST(request: NextRequest) {
             media_url: publicUrl,
             text_content: trimmedText && trimmedText.length > 0 ? trimmedText : null,
             content_type: contentType,
+            attributes: attributes,
             realm: null, // Phase 1: No realm classification
             captured_at: new Date().toISOString(),
+            latitude: latitude,
+            longitude: longitude,
           })
           .select("id, text_content, media_url, captured_at")
           .single();

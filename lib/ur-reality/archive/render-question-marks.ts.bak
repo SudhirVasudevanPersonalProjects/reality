@@ -1,0 +1,105 @@
+import * as THREE from 'three'
+import { Position3D } from './hexagonal-lattice'
+
+export interface QuestionMarkMesh {
+  mesh: THREE.Sprite
+  basePosition: Position3D
+  somethingId: string
+  initialTime: number
+}
+
+/**
+ * Create a simple grey question mark texture (no external SVG)
+ */
+export async function loadQuestionMarkTexture(): Promise<THREE.Texture> {
+  const size = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+  
+  // Ensure transparent background
+  ctx.clearRect(0, 0, size, size)
+  
+  // Draw grey "?" centered
+  ctx.font = 'bold 180px sans-serif'
+  ctx.fillStyle = '#999696' // Light grey
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('?', size / 2, size / 2)
+
+  // Create Three.js texture
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.needsUpdate = true
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.format = THREE.RGBAFormat // Ensure alpha channel is used
+
+  return texture
+}
+
+export function createQuestionMarkSprite(
+  position: Position3D,
+  texture: THREE.Texture,
+  somethingId: string,
+  size: number = 5
+): QuestionMarkMesh {
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,       // already set
+    opacity: 1.0,
+    color: 0xffffff,
+    alphaTest: 0.1,          // <--- only render non-transparent pixels
+  })
+
+  const sprite = new THREE.Sprite(material)
+  const verticalStretch = 1  // match actual aspect ratio of the "?"
+  sprite.scale.set(size, size, 1) // square since ? is roughly square
+  sprite.position.set(position.x, position.y, position.z)
+  sprite.userData = { somethingId, isQuestionMark: true }
+
+  return {
+    mesh: sprite,
+    basePosition: position,
+    somethingId,
+    initialTime: Math.random() * Math.PI * 2,
+  }
+}
+
+
+/**
+ * Update question mark LOD
+ */
+export function updateQuestionMarkLOD(qm: QuestionMarkMesh, cameraDistance: number) {
+  const material = qm.mesh.material as THREE.SpriteMaterial
+  const CLOSE = 80
+  const MID = 200
+  if (cameraDistance < CLOSE) {
+    material.opacity = 1.0
+  } else if (cameraDistance < MID) {
+    const t = (cameraDistance - CLOSE) / (MID - CLOSE)
+    material.opacity = 1.0 - t * 0.3
+  } else {
+    material.opacity = 0.8
+  }
+}
+
+/**
+ * Floating animation
+ */
+export function updateFloatingAnimation(qms: QuestionMarkMesh[], time: number) {
+  qms.forEach((qm) => {
+    const amplitude = 0.3
+    const frequency = 0.0008
+    // const offset = Math.sin(time * frequency + qm.initialTime) * amplitude
+    // qm.mesh.position.y = qm.basePosition.y + offset
+  })
+}
+
+/**
+ * Click darken
+ */
+export function setQuestionMarkClicked(qm: QuestionMarkMesh, clicked: boolean) {
+  const mat = qm.mesh.material as THREE.SpriteMaterial
+  mat.color.setHex(clicked ? 0x6a6a6a : 0xffffff)
+}

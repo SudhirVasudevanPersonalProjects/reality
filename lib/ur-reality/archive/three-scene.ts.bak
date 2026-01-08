@@ -1,0 +1,103 @@
+/**
+ * Three.js Scene Setup for ur-reality
+ *
+ * Creates and manages the 3D scene with camera, renderer, and lighting
+ */
+
+import * as THREE from 'three'
+
+export interface SceneConfig {
+  canvas: HTMLCanvasElement
+  cameraDistance?: number
+  cameraAngle?: number
+}
+
+export interface UrRealityScene {
+  scene: THREE.Scene
+  camera: THREE.PerspectiveCamera
+  renderer: THREE.WebGLRenderer
+  raycaster: THREE.Raycaster
+  mouse: THREE.Vector2
+}
+
+/**
+ * Create the Three.js scene for ur-reality
+ */
+export function createUrRealityScene(config: SceneConfig): UrRealityScene {
+  const { canvas, cameraDistance = 100, cameraAngle = Math.PI / 9 } = config // Changed from 45° to 20°
+
+  // Scene
+  const scene = new THREE.Scene()
+  scene.background = new THREE.Color(0x0a1628) // Dark blue space
+
+  // Camera (45-degree angle by default, similar to Story 2.7 globe)
+  const camera = new THREE.PerspectiveCamera(
+    45, // FOV
+    window.innerWidth / window.innerHeight,
+    0.1,
+    10000
+  )
+
+  // Position camera at 45-degree angle
+  camera.position.set(
+    0,
+    cameraDistance * Math.sin(cameraAngle),
+    cameraDistance * Math.cos(cameraAngle)
+  )
+  camera.lookAt(0, 0, 0)
+
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false,
+  })
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)) // Cap at 2 for performance
+
+  // Ambient lighting (soft overall light)
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
+  scene.add(ambientLight)
+
+  // Directional light (for depth perception)
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4)
+  directionalLight.position.set(50, 100, 50)
+  scene.add(directionalLight)
+
+  // Raycaster for hover/click detection
+  const raycaster = new THREE.Raycaster()
+  const mouse = new THREE.Vector2()
+
+  return { scene, camera, renderer, raycaster, mouse }
+}
+
+/**
+ * Handle window resize
+ */
+export function handleResize(
+  camera: THREE.PerspectiveCamera,
+  renderer: THREE.WebGLRenderer
+) {
+  camera.aspect = window.innerWidth / window.innerHeight
+  camera.updateProjectionMatrix()
+  renderer.setSize(window.innerWidth, window.innerHeight)
+}
+
+/**
+ * Clean up Three.js resources
+ */
+export function cleanup(scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
+  // Dispose geometries, materials, textures
+  scene.traverse((object) => {
+    if (object instanceof THREE.Mesh) {
+      object.geometry.dispose()
+      if (Array.isArray(object.material)) {
+        object.material.forEach((mat) => mat.dispose())
+      } else {
+        object.material.dispose()
+      }
+    }
+  })
+
+  renderer.dispose()
+}

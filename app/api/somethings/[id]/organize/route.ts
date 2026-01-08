@@ -127,7 +127,7 @@ export async function PATCH(
     // Revalidate dashboard and chamber to show updated unorganized count
     revalidatePath('/dashboard');
     revalidatePath('/chamber');
-    revalidatePath('/my_reality');
+    revalidatePath('/my-reality/physical-abode');
 
     const response: OrganizeResponse = {
       success: true,

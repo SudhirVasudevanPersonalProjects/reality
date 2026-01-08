@@ -84,7 +84,10 @@
       "SlashCommand(/BMad:agents:qa)",
       "Bash(\"C:\\Users\\14088\\misc.inc\\reality\\docs\\ur-reality.md\")",
       "Bash(\"C:\\Users\\14088\\misc.inc\\reality\\docs\\prd.md\")",
-      "SlashCommand(/BMad:agents:analyst)"
+      "SlashCommand(/BMad:agents:analyst)",
+      "Bash(timeout 60 pnpm dev:*)",
+      "Bash(done)",
+      "Bash(pnpm vitest:*)"
     ],
     "deny": [],
     "ask": []

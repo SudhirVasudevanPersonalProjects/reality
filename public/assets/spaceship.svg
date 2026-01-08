@@ -1,0 +1,23 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main body -->
+  <path d="M40 10 L50 50 L40 45 L30 50 Z" fill="#60a5fa" stroke="#3b82f6" stroke-width="2"/>
+
+  <!-- Nose cone -->
+  <path d="M40 10 L45 20 L35 20 Z" fill="#3b82f6"/>
+
+  <!-- Wings -->
+  <path d="M30 35 L20 45 L30 40 Z" fill="#60a5fa" stroke="#3b82f6" stroke-width="1.5"/>
+  <path d="M50 35 L60 45 L50 40 Z" fill="#60a5fa" stroke="#3b82f6" stroke-width="1.5"/>
+
+  <!-- Engine flames -->
+  <ellipse cx="35" cy="52" rx="3" ry="6" fill="#f59e0b" opacity="0.8"/>
+  <ellipse cx="40" cy="50" rx="2.5" ry="8" fill="#fbbf24" opacity="0.9"/>
+  <ellipse cx="45" cy="52" rx="3" ry="6" fill="#f59e0b" opacity="0.8"/>
+
+  <!-- Window -->
+  <circle cx="40" cy="28" r="4" fill="#1e293b" stroke="#60a5fa" stroke-width="1"/>
+  <circle cx="40" cy="28" r="2" fill="#38bdf8" opacity="0.6"/>
+
+  <!-- Detail lines -->
+  <line x1="40" y1="20" x2="40" y2="45" stroke="#1e40af" stroke-width="1" opacity="0.4"/>
+</svg>

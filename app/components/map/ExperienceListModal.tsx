@@ -81,7 +81,7 @@ export function ExperienceListModal({
 
   // Handle view details click
   const handleViewDetails = (id: string) => {
-    router.push(`/my_reality/${id}`)
+    router.push(`/my-reality/physical-abode/${id}`)
   }
 
   return (

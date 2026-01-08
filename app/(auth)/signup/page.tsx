@@ -92,6 +92,7 @@ export default function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 block w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition"
                 placeholder="you@example.com"
+                suppressHydrationWarning
               />
             </div>
 
@@ -109,6 +110,7 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition"
                 placeholder="At least 6 characters"
+                suppressHydrationWarning
               />
             </div>
           </div>
@@ -123,6 +125,7 @@ export default function SignupPage() {
             type="submit"
             disabled={loading}
             className="w-full flex justify-center py-3 px-4 border border-white rounded-md text-sm font-medium text-black bg-white hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-black transition disabled:opacity-50 disabled:cursor-not-allowed"
+            suppressHydrationWarning
           >
             {loading ? "Creating account..." : "Sign Up"}
           </button>

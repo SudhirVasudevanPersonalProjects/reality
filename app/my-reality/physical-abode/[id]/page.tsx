@@ -32,7 +32,7 @@ export default async function SomethingDetailPage({
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
         <h1 className="text-2xl font-bold mb-4">Experience not found</h1>
         <Link
-          href="/my_reality"
+          href="/my-reality/physical-abode"
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition"
         >
           Back to Map
@@ -76,7 +76,7 @@ export default async function SomethingDetailPage({
       <div className="border-b border-gray-800 bg-gray-900">
         <div className="max-w-4xl mx-auto px-6 py-4">
           <Link
-            href="/my_reality"
+            href="/my-reality/physical-abode"
             className="inline-flex items-center text-blue-400 hover:text-blue-300 transition"
           >
             <svg

@@ -413,79 +413,267 @@ Users can capture to their heart's content - days in a row, weeks in a row. This
 
 ---
 
-## 5. The /ur-reality Page - Mystery Map of Somethings
+## 5. The /my-reality/somewhere Page - "Somewhere, A Realm of Somethings"
 
-**Route**: `/ur-reality` (manual navigation only - user types in URL)
+**Route**: `/my-reality/somewhere` (manual navigation only - user types in URL)
 
-**Purpose**: Visual representation of all captured somethings as a mystery map
+**Purpose**: Visual representation of all captured somethings as an infinite, zoomable mystery map with chamber entry point
 
 **Access**: Available when user is logged in (no automatic redirect from capture pages)
 
 ---
 
-### Visual Design
+### Vision: Infinite Space Visualization
 
-**Background**: Dark blue space theme
+**Conceptual Name**: "Somewhere, A Realm of Somethings"
 
-**Question Marks**:
-- **Style**: Thick, playful cartoon icons (rounded, friendly)
-- **Color**: Grey (all question marks same color for now)
-- **Distribution**: Auto-scaling based on count
+**Core Philosophy**: Create an interactive, infinite realm of curiosity where question marks represent somethings, and zooming transforms their visual scale while maintaining their infinite, unstructured nature.
 
-### Auto-Scaling Distribution Logic
+**The Problem with Current System (v3.3)**:
+- Fixed distribution patterns (1-5) or random spread (6+)
+- Question marks scale down as count increases
+- No sense of infinite space
+- Hard to navigate many somethings
+- No organization capability for the future
 
-| Count | Size | Position Pattern |
-|-------|------|------------------|
-| **1** | Big | Center of screen |
-| **2** | Bit smaller | Left & right sides |
-| **3** | Even smaller | Each third (left, center, right) |
-| **4** | Smaller | Each quadrant |
-| **5** | Smaller | 4 quadrants + center |
-| **6+** | Keep scaling down | Asymmetric spread, maintain rough separation |
-
-**Spacing**: Question marks maintain separation (don't overlap)
+**The Solution: Infinite Zoomable Space**
 
 ---
 
-### Interaction Behavior
+### Visual Design (v3.4 - 3D Space with Fixed View)
 
-**Hover (on unclicked ?):**
+**3D Implementation**: Three.js
+- Fixed camera view (can't rotate, but can pan/zoom)
+- Similar to globe zoom with 3D buildings from Story 2.7
+- 45-degree angle default view (top-down-ish perspective)
+
+**Background**: Perlin noise texture
+- Cloud-like appearance
+- Surrounds the bounded space of somethings
+- Represents "Unknown" - the space outside organized somethings
+
+**Question Marks**:
+- **SVG-based**: Use `white-question-mark-emoji-clipart-original.svg`
+- **Proper circle**: Bottom ellipse should be actual circle (not square)
+- **Colorable**: Can change fill color (no default red - use grey/white)
+- **All same size** (regardless of count)
+- **Equally spaced** via invisible rhombi lattice
+- **Floating animation**: Bob up and down very subtly (acute movement)
+
+**Lattice Organization** (Invisible Structure):
+- **Rhombi lattice pattern** - provides equal spacing
+- **Rhombi are invisible** - user sees organic placement
+- **At borders**: Rhombi pattern gets cut off at edge (no wrapping/mirroring)
+- **Bounded space**: Default 50 somethings max per user
+- **Per-user setting**: Max somethings limit stored in user profile
+
+**The Border**:
+- Visible boundary separating organized somethings from "Unknown"
+- Perlin noise fills space outside border
+- Border shape adapts to number of somethings
+
+---
+
+### Zoom Behavior - Three View Levels
+
+**View 1: Default View (45-degree angle)**
+- **Zoom Level**: Close/Medium
+- **Camera Angle**: 45-degree top-down-ish perspective
+- **What's Visible**: Individual question marks on one plane
+- **Interactions**: Can pan (click-drag), zoom in/out (scroll), click to focus
+- **Similar To**: Globe view with 3D buildings (Story 2.7)
+
+**View 2: Bird's Eye View (zoomed out)**
+- **Zoom Level**: Far
+- **Camera Angle**: Auto-shifts from 45° to bird's eye (top-down)
+- **What's Visible**: Cluster of dots (can't see ? details)
+- **Visual**: Group of dots + border + Perlin noise around
+- **Purpose**: See all somethings as a collection
+
+**View 3: Max Zoom Out (extreme)**
+- **Zoom Level**: Extreme far
+- **What's Visible**: Single dot representing entire abode
+- **Visual**: One dot = all somethings, surrounded by Perlin noise
+- **Purpose**: View totality of "Somewhere, A Realm of Somethings"
+
+**Zoom Transitions**:
+- Smooth camera transitions between views
+- Auto-shift camera angle based on zoom level
+- Preserve spatial relationships during zoom
+
+---
+
+### Interaction Behavior (v3.4 - Desmos-like UI)
+
+**Device Support**:
+- **Desktop/Laptop**: Full support (primary experience)
+- **iPad**: Supported
+- **Mobile (phone)**: BLOCKED - show message "View on bigger screen"
+
+**Pan/Drag**:
+- **Click and drag** to move through the space
+- **Swipable** (smooth, responsive)
+- Somethings flow past as you navigate
+- Bounded space (user-adjustable bounds)
+
+**Zoom**:
+- **Scroll wheel** to zoom in/out (desktop)
+- **Pinch gesture** for iPad
+- Smooth zoom transition
+- Desmos-like UI feel
+
+**Hover (on question marks in Default View)**:
 - Something content appears underneath the question mark
 - Content has higher z-index (appears above other question marks)
 - Content disappears when hover ends
 
-**Click (on circle part of ?):**
-- Question mark **slightly shades inside** (visual feedback)
-- Something content displays **persistently** (stays visible after cursor moves)
-- **Multiple question marks can be clicked** → multiple somethings displayed simultaneously
-- Clicked question marks are "locked open" (ignore hover)
+**Click (on question mark)**:
+- **Zoom to focus**: Camera zooms in on clicked question mark
+- **Display content**: Show just that question mark and its content
+- **Isolated view**: Only the clicked something is visible
+- **Zoom out to return**: Scroll out or click outside to return to Default View
 
-**Hover on Clicked ?:**
-- Already-clicked question marks ignore hover (content already showing)
-- Can still hover on other unclicked question marks
+**Click-Drag to Pan** (in Default View):
+- Click and hold background (not a question mark)
+- Drag to move through the space
+- Smooth, responsive panning (Desmos-like feel)
+
+**Hover on Clicked ?**:
+- N/A - clicking zooms to isolated view instead of locking content
+
+---
+
+### Equal Spacing Algorithm
+
+**Key Principle**: Each question mark has equal radius around it, no overlap
+
+**Implementation Approach**:
+1. **Grid-less distribution**: No imposed grid, organic placement
+2. **Force-directed layout**: Somethings repel each other to maintain spacing
+3. **Infinite canvas**: Positions can extend infinitely in all directions
+4. **Consistent spacing**: Minimum distance between any two question marks
+
+**Example Spacing**:
+- If 10 somethings: Spread with ~500px radius each
+- If 100 somethings: Spread with ~500px radius each (just more spread out)
+- If 1000 somethings: Spread with ~500px radius each (space extends further)
+
+**No Size Scaling**: Unlike v3.3, question marks DON'T shrink as count increases. Space just extends.
 
 ---
 
 ### Content Display
 
-**What Shows**:
+**What Shows** (same as v3.3):
 - **Text**: Full text content (all text, not truncated)
 - **Photo**: Show the actual photo
 - **Video**: Show video thumbnail
-- **Link**: Link preview (embedded card - like Twitter/IG preview cards if possible)
+- **Link**: Link preview card
 
 **Content Position**:
 - Appears **underneath** the question mark
-- Z-index **above** other question marks (so it's not obscured)
+- Z-index **above** other question marks
+- Positioned relative to zoom level (scales with zoom)
+
+---
+
+### Navigation Features & Chamber Entry
+
+**Rocket Ship / Space Ship (Bottom Left)**:
+- **Page Load Animation Sequence**:
+  1. Page loads zoomed out showing Unknown (Perlin noise) - spaceship NOT visible
+  2. Camera zooms to home screen showing spread of all question mark dots
+  3. Spaceship appears in bottom left
+  4. Text appears above spaceship: "ENTER CHAMBER" (all caps)
+
+- **Chamber Entry Flow**:
+  1. User clicks on spaceship
+  2. Spaceship flies to nearest unorganized something (most recent)
+  3. Spaceship slowly zooms out of vision, heading toward that something
+  4. Whole screen slowly goes black
+  5. Screen blinks back into vision
+  6. **Chamber View appears**: Circle with content in middle, care bar underneath
+
+**Search Bar (Bottom Center)**:
+- Current: Placeholder (no filtering yet)
+- Future: Search text → zoom/pan to matching somethings
+
+**Minimap (Future)**:
+- Small overview of entire space
+- Shows your current view position
+- Click to jump to different areas
+
+---
+
+### Chamber View (Organization Interface)
+
+**When to Show**: After spaceship animation sequence completes
+
+**Visual Layout**:
+- **Center**: Content circle displaying the current something
+- **Top Right**: Change to "Something #X" (instead of count legend)
+- **Bottom Center**: Care bar (existing - modifications planned for future)
+- **Bottom Right**: "Send to Abode" with dropdown
+
+**Send to Abode Dropdown**:
+- **Options**:
+  - Dreams
+  - Beauty
+  - Ugly
+  - Rules of Reality
+  - Create New (custom abode)
+
+**Abode System** (Initial Implementation):
+- Each abode is a **space randomly assigned** in my-reality
+- Uses same **hexagonal lattice** structure as "Somewhere"
+- **Dynamic expansion**: When more space needed (creating abode or sending something):
+  - Expand the "Known" region
+  - Shrink the "Unknown" (Perlin noise) by one layer
+- Abodes start small, grow based on number of somethings they contain
+
+**Chamber Purpose**:
+- Process unorganized somethings
+- Decide what to do with each one
+- Organize into meaningful abodes (Dreams, Beauty, Ugly, Rules of Reality, custom)
+- Gateway between raw capture and organized reality
+
+---
+
+### Empty State
+
+**If user has 0 somethings**:
+- Show message: "No somethings captured yet. Start capturing at /capture"
+- Link to `/capture` page
 
 ---
 
 ### Future Enhancements
+
+**Coloring System**:
 - Question mark colors based on vibe (Beauty spectrum: grey → colored)
+- High vibe (beauty) = brighter colors
+- Low vibe (ugly) = darker colors
+
+**Connections**:
 - Connections visible as lines between question marks
-- Filter/search somethings
-- Click to navigate to full something detail view
-- Zoom/pan on large collections
+- Lines represent relationships, patterns
+
+**Clustering**:
+- Somethings with similar meaning cluster closer
+- Visual patterns emerge over time
+
+**Abodes/Regions**:
+- Named regions of space (Lil Wayne abode, work, relationships)
+- User can create boundaries and labels
+
+**Intention-Based Navigation**:
+- Set a goal/intention → rocket ship flies toward relevant somethings
+- Question marks light up based on relevance
+- Space reorganizes around your intention
+
+**Detail View**:
+- Click to navigate to full something detail page
+- Edit, add connections, set vibe rating
 
 ---
 

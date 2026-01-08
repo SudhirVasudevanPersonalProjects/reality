@@ -333,7 +333,7 @@ export function MapView({
           const newPitch = pitch.toString()
 
           if (currentLat !== newLat || currentLng !== newLng || currentZoom !== newZoom || currentPitch !== newPitch) {
-            const newUrl = `/my_reality?lat=${newLat}&lng=${newLng}&zoom=${newZoom}&pitch=${newPitch}`
+            const newUrl = `/my-reality/physical-abode?lat=${newLat}&lng=${newLng}&zoom=${newZoom}&pitch=${newPitch}`
             router.replace(newUrl, { scroll: false })
 
             // Call optional callback
@@ -361,6 +361,24 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run once on mount - URL changes are handled by moveend event
 
+  // Helper function to get marker color based on care level
+  const getMarkerColor = (care: number | null, realm: string | null): string => {
+    // Unorganized somethings (no realm) are light gray
+    if (!realm) return '#9ca3af' // gray-400
+
+    // Map care levels to colors (1-5)
+    if (!care) return '#9ca3af' // gray for no care rating
+
+    switch (care) {
+      case 1: return '#ef4444' // red-500 (dislike)
+      case 2: return '#f97316' // orange-500
+      case 3: return '#eab308' // yellow-500 (neutral)
+      case 4: return '#22c55e' // green-500
+      case 5: return '#ec4899' // pink-500 (love)
+      default: return '#9ca3af'
+    }
+  }
+
   // Helper function to calculate brightness from care rating
   const calculateBrightness = (care: number | null): number => {
     if (!care) return 0.5 // Default to medium brightness if no care rating
@@ -370,10 +388,6 @@ export function MapView({
 
   // Helper function to add markers to map
   const addMarkersToMap = useCallback((map: mapboxgl.Map, somethings: Something[]) => {
-    // Clear existing markers
-    markersRef.current.forEach((marker) => marker.remove())
-    markersRef.current.clear()
-
     // Group somethings by location (same lat/lng)
     const locationGroups = new Map<string, Something[]>()
 
@@ -386,14 +400,22 @@ export function MapView({
       }
     })
 
-    // Create one marker per location
+    // Track which markers we want to keep
+    const markersToKeep = new Set<string>()
+
+    // Create or update markers for each location
     locationGroups.forEach((group, key) => {
+      markersToKeep.add(key)
+
+      // If marker already exists at this location, skip recreation
+      if (markersRef.current.has(key)) {
+        return
+      }
       const [lat, lng] = key.split(',').map(Number)
 
-      // Calculate average care for brightness (or use max care)
-      const avgCare =
-        group.reduce((sum, s) => sum + (s.care || 3), 0) / group.length
-      const brightness = calculateBrightness(avgCare)
+      // Use the first item's care and realm for color (or could use highest care)
+      const primaryItem = group[0]
+      const markerColor = getMarkerColor(primaryItem.care, primaryItem.realm)
 
       // Create custom marker element
       const el = document.createElement('div')
@@ -401,19 +423,21 @@ export function MapView({
       el.style.width = '20px'
       el.style.height = '20px'
       el.style.borderRadius = '50%'
-      el.style.backgroundColor = '#ff0000'
-      el.style.opacity = `${Math.max(0.2, brightness)}` // Minimum 0.2 so markers are always visible
+      el.style.backgroundColor = markerColor
+      el.style.opacity = '0.9'
       el.style.border = '2px solid white'
       el.style.cursor = 'pointer'
-      el.style.transition = 'opacity 0.2s'
+      el.style.transition = 'transform 0.2s, box-shadow 0.2s'
       el.style.zIndex = '1000' // Ensure markers stay on top of 3D buildings
 
       // Hover effect
       el.addEventListener('mouseenter', () => {
-        el.style.opacity = '1'
+        el.style.transform = 'scale(1.2)'
+        el.style.boxShadow = '0 0 10px rgba(255,255,255,0.5)'
       })
       el.addEventListener('mouseleave', () => {
-        el.style.opacity = `${Math.max(0.2, brightness)}`
+        el.style.transform = 'scale(1)'
+        el.style.boxShadow = 'none'
       })
 
       // Click handler - zoom to street view, then open modal
@@ -445,13 +469,21 @@ export function MapView({
       // Store marker reference with location key
       markersRef.current.set(key, marker)
     })
+
+    // Remove markers that no longer exist in the data
+    markersRef.current.forEach((marker, key) => {
+      if (!markersToKeep.has(key)) {
+        marker.remove()
+        markersRef.current.delete(key)
+      }
+    })
   }, [])
 
-  // Fetch Physical somethings and add markers
+  // Fetch ALL somethings with location and add markers
   useEffect(() => {
     const fetchSomethings = async () => {
       try {
-        const response = await fetch('/api/somethings/physical')
+        const response = await fetch('/api/somethings/with-location')
         if (!response.ok) {
           throw new Error('Failed to fetch somethings')
         }

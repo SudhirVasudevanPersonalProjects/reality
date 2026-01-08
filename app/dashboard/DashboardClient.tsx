@@ -77,7 +77,7 @@ export default function DashboardClient({ user, captures, unorganizedCount }: Da
             <h2 className="text-xl font-bold">Reality</h2>
             <div className="flex items-center space-x-4">
               <Link
-                href="/my_reality"
+                href="/my-reality/physical-abode"
                 className="px-4 py-2 text-sm border border-gray-700 rounded-md hover:bg-gray-900 transition"
               >
                 My Reality

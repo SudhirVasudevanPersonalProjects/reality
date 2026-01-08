@@ -16,8 +16,8 @@ ALTER TABLE somethings ADD COLUMN domain TEXT;
 ALTER TABLE somethings ADD COLUMN category_path TEXT;
 
 -- Add care fields (emotional response and frequency)
-ALTER TABLE somethings ADD COLUMN care INT CHECK (care BETWEEN 1 AND 5);  -- 1=Hate, 2=Dislike, 3=Care, 4=Like, 5=Love
-ALTER TABLE somethings ADD COLUMN care_frequency INT DEFAULT 1;  -- Counter for repeated encounters
+ALTER TABLE somethings ADD COLUMN care INT CHECK (care BETWEEN -2 AND 2);  -- 1=Hate, 2=Dislike, 3=Care, 4=Like, 5=Love
+ALTER TABLE somethings ADD COLUMN care_frequency INT DEFAULT 0;  -- Counter for repeated encounters
 
 -- Add extensibility and hierarchy fields
 ALTER TABLE somethings ADD COLUMN attributes JSONB DEFAULT '{}'::jsonb;

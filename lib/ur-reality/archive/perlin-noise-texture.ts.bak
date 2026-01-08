@@ -1,0 +1,61 @@
+/**
+ * Perlin Noise Texture Generation
+ *
+ * Creates a cloud-like grey Perlin noise texture for the "Unknown" space
+ * outside the circular border of somethings.
+ */
+
+import { createNoise2D } from 'simplex-noise'
+import * as THREE from 'three'
+
+/**
+ * Generate Perlin noise texture with cloud-like appearance
+ *
+ * @param width - Texture width in pixels
+ * @param height - Texture height in pixels
+ * @returns THREE.Texture with grey cloudy Perlin noise
+ */
+export function generatePerlinNoiseTexture(
+  width: number = 1024,
+  height: number = 1024
+): THREE.Texture {
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')!
+
+  const noise2D = createNoise2D()
+  const imageData = ctx.createImageData(width, height)
+
+  // Generate Perlin noise
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      // Multiple octaves for cloud-like effect
+      let value = 0
+      value += noise2D(x / 50, y / 50) * 1.0 // Large features
+      value += noise2D(x / 25, y / 25) * 0.5 // Medium features
+      value += noise2D(x / 12.5, y / 12.5) * 0.25 // Fine details
+
+      // Normalize to 0-1
+      value = (value / 1.75 + 1) / 2
+
+      // Map to grey tones (light grey)
+      const brightness = value * 255
+
+      const idx = (y * width + x) * 4
+      imageData.data[idx] = brightness * 0.5 // R (grey)
+      imageData.data[idx + 1] = brightness * 0.5 // G (grey)
+      imageData.data[idx + 2] = brightness * 0.5 // B (grey)
+      imageData.data[idx + 3] = 255 * 0.3 // A (semi-transparent)
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(4, 4) // Tile the pattern
+
+  return texture
+}

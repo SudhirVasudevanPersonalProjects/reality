@@ -234,7 +234,7 @@ export function MindCard({ something, connectionCount, dependencies, previousId,
                         {something.latitude.toFixed(4)}°N, {Math.abs(something.longitude).toFixed(4)}°{something.longitude >= 0 ? 'E' : 'W'}
                       </div>
                       <Link
-                        href={`/my_reality?lat=${something.latitude}&lng=${something.longitude}&zoom=15`}
+                        href={`/my-reality/physical-abode?lat=${something.latitude}&lng=${something.longitude}&zoom=15`}
                         className="inline-block mt-1 px-3 py-1 bg-purple-600 hover:bg-purple-500 rounded text-sm"
                       >
                         View on Map

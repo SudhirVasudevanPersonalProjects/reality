@@ -516,6 +516,7 @@ export type Database = {
           birth_date: string | null
           created_at: string | null
           id: string
+          max_somethings_bound: number | null
           name: string | null
           phone_number: string | null
         }
@@ -523,6 +524,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string | null
           id?: string
+          max_somethings_bound?: number | null
           name?: string | null
           phone_number?: string | null
         }
@@ -530,6 +532,7 @@ export type Database = {
           birth_date?: string | null
           created_at?: string | null
           id?: string
+          max_somethings_bound?: number | null
           name?: string | null
           phone_number?: string | null
         }
@@ -540,6 +543,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_connection_count: {
+        Args: { something_id_param: string }
+        Returns: number
+      }
       seed_default_domains: {
         Args: { target_user_id: string }
         Returns: undefined

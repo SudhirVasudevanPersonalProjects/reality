@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, ClipboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import { getCurrentLocation } from '@/lib/capture/get-current-location'
 
 const LOCALSTORAGE_KEY = 'liveCaptureText'
 
@@ -13,8 +14,19 @@ export default function LiveCaptureClient() {
   const [isSinking, setIsSinking] = useState(false)
   const [isHoldingMelt, setIsHoldingMelt] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const meltHoldTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Detect desktop vs mobile
+  useEffect(() => {
+    const checkViewport = () => {
+      setIsDesktop(window.innerWidth >= 768)
+    }
+    checkViewport()
+    window.addEventListener('resize', checkViewport)
+    return () => window.removeEventListener('resize', checkViewport)
+  }, [])
 
   // Load text from localStorage on mount
   useEffect(() => {
@@ -79,6 +91,15 @@ export default function LiveCaptureClient() {
     }
   }
 
+  // Handle Enter key (desktop only)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Desktop only: Enter key sends (not on mobile)
+    if (isDesktop && e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
   // Handle rocket ship send
   const handleSend = async () => {
     const trimmedText = text.trim()
@@ -93,9 +114,17 @@ export default function LiveCaptureClient() {
     setIsSubmitting(true)
 
     try {
+      // Get current location (silent, non-blocking)
+      const location = await getCurrentLocation()
+
       // Submit to API
       const formData = new FormData()
       formData.append('text_content', trimmedText)
+
+      if (location) {
+        formData.append('latitude', location.latitude.toString())
+        formData.append('longitude', location.longitude.toString())
+      }
 
       const response = await fetch('/api/somethings', {
         method: 'POST',
@@ -137,6 +166,7 @@ export default function LiveCaptureClient() {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onPaste={handlePaste}
+        onKeyDown={handleKeyDown}
         className="w-full h-screen bg-black text-white text-2xl p-8 pb-32 outline-none resize-none"
         placeholder=""
         disabled={isSubmitting || isSinking}
